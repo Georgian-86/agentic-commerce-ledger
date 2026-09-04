@@ -36,6 +36,10 @@ export function issueSeedMandates() {
   const seeds = JSON.parse(readFileSync(SEED_PATH, "utf-8"));
   for (const seed of seeds) {
     const mandate = issueIntentMandate({
+      // Stable id per persona — `seed.mandate_id` from mandates.json.
+      // A demo reset or a redeploy re-signs the credential (new nonce)
+      // but keeps the id, so an open console tab's picker still works.
+      mandate_id: seed.mandate_id,
       label: seed.label,
       issued_to: { agent_id: AGENT_ID, agent_name: "In-app Shopper Agent", subject: seed.issued_to },
       max_amount_paise: seed.max_amount_paise,

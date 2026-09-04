@@ -132,12 +132,14 @@ export function issueIntentMandate({
   allowed_merchants = [MERCHANT_ID],
   requires_confirmation_above_paise = null,
   ttl_hours = 48,
+  mandate_id = null, // demo personas pass a stable id so a reset / redeploy
+                     // doesn't invalidate a mandate id an open browser holds
 }) {
   const issued_at = nowIso();
   const body = {
     type: "IntentMandate",
     version: MANDATE_VERSION,
-    mandate_id: `im_${randomUUID().slice(0, 12)}`,
+    mandate_id: mandate_id || `im_${randomUUID().slice(0, 12)}`,
     label,
     issued_at,
     expires_at: new Date(Date.now() + ttl_hours * 3600 * 1000).toISOString(),

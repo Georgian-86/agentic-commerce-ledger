@@ -85,11 +85,22 @@ export default {
 };
 
 /* ---------- pieces ---------- */
+function fillMandateOptions(sel, mandates) {
+  const keep = sel.value;
+  sel.innerHTML = "";
+  for (const m of mandates) sel.appendChild(h("option", { value: m.mandate_id, text: m.label }));
+  if (mandates.some((m) => m.mandate_id === keep)) sel.value = keep;
+}
+
 function chatSetup(mandates) {
-  const sel = h("select.select#mandate-pick",
-    ...mandates.map((m) => h("option", { value: m.mandate_id, text: m.label })));
+  const sel = h("select.select#mandate-pick");
+  fillMandateOptions(sel, mandates);
   const startBtn = h("button.btn.btn-primary#start-btn", { text: "Start session" });
   startBtn.addEventListener("click", () => startSession(sel.value));
+
+  // Keep the picker in sync with the store — a demo reset or a redeploy
+  // can change which mandates exist while this view is open.
+  offs.push(store.on("mandates", (ms) => fillMandateOptions(sel, ms || [])));
 
   const setup = h("div.chat-setup#chat-setup", sel, startBtn);
   const bar = h("div.session-bar#session-bar", { hidden: true });
@@ -124,7 +135,7 @@ function mm(k, id, cls = "") {
 }
 
 /* ---------- behaviour ---------- */
-async function startSession(mandate_id) {
+async function startSession(mandate_id, isRetry = false) {
   const btn = document.querySelector("#start-btn");
   btn.disabled = true; btn.textContent = "…";
   try {
@@ -153,8 +164,19 @@ async function startSession(mandate_id) {
     input.focus();
     setStage("plan");
   } catch (e) {
-    toast("Could not start session", e.message, "crit");
     btn.disabled = false; btn.textContent = "Start session";
+    // Stale picker (a reset / redeploy rotated the mandate). Re-fetch the
+    // list, rebuild the picker, and retry once against the matching one.
+    if (!isRetry && /unknown mandate/i.test(e.message || "")) {
+      try {
+        const fresh = await api.mandates();
+        store.set("mandates", fresh);
+        const sel = document.querySelector("#mandate-pick");
+        const match = fresh.find((m) => m.label === sel.options[sel.selectedIndex]?.text) || fresh[0];
+        if (match) { sel.value = match.mandate_id; return startSession(match.mandate_id, true); }
+      } catch {}
+    }
+    toast("Could not start session", e.message, "crit");
   }
 }
 
