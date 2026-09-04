@@ -1,0 +1,7 @@
+# Normalise line endings to LF in the repo so Linux hosts and Docker
+# builds get consistent files regardless of the committer's OS.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary

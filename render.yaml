@@ -1,0 +1,69 @@
+# Render Blueprint — one-click deploy of the whole project.
+#
+# Render → New → Blueprint → point at this repo. Render reads this file,
+# creates the service, and asks you to paste the three secret values.
+#
+# Free plan works but does NOT support a persistent disk — on free,
+# delete the `disk:` block and the `ACL_DATA_DIR` var below; the ledger
+# and keys then reset on each deploy (fine for a demo, and `npm run
+# demo:reset` does the same thing on purpose). The service also sleeps
+# after 15 min idle and cold-starts in ~30s. For an always-on demo with
+# persistence, set `plan: starter` and keep the disk.
+
+services:
+  - type: web
+    name: agentic-bazaar
+    runtime: node
+    plan: free
+    region: singapore            # closest Render region to India / Razorpay
+    buildCommand: npm install && npm run seed
+    startCommand: node commerce-agent/src/index.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: EMBED_CATALOG
+        value: "true"
+      - key: HOST
+        value: 0.0.0.0
+      # Render injects PORT and RENDER_EXTERNAL_URL; the app derives
+      # PUBLIC_BASE_URL from RENDER_EXTERNAL_URL automatically.
+
+      # --- LLM (Groq free tier) ---
+      - key: LLM_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: LLM_MODEL
+        value: openai/gpt-oss-120b
+      - key: LLM_FALLBACK_MODELS
+        value: llama-3.3-70b-versatile,llama-3.1-8b-instant
+      - key: LLM_API_KEY
+        sync: false                # paste your Groq key in the Render UI
+
+      # --- Razorpay test mode ---
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false                # optional; set once you add the webhook
+
+      # --- trust layer ---
+      - key: CONFIRMATION_THRESHOLD_PAISE
+        value: "150000"
+
+      # --- demo safety ---
+      # Start in DEMO_MODE so the first deploy works before you've added
+      # real Razorpay keys. Flip to "false" in the Render UI once the
+      # keys above are set and you've configured the webhook.
+      - key: DEMO_MODE
+        value: "true"
+
+      # Persist the hash-chained ledger + Ed25519 keys across deploys.
+      - key: ACL_DATA_DIR
+        value: /data
+
+    disk:
+      name: ledger
+      mountPath: /data
+      sizeGB: 1

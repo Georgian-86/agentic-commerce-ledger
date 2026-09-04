@@ -1,0 +1,51 @@
+# Fly.io deploy — arguably the best fit: a real persistent process,
+# streaming (SSE) works, cheap always-on, one volume for the ledger.
+#
+#   fly launch --no-deploy      # once, to create the app (edit the name it picks)
+#   fly volume create ledger --size 1
+#   fly secrets set LLM_API_KEY=... RAZORPAY_KEY_ID=... RAZORPAY_KEY_SECRET=...
+#   fly deploy
+#
+# After first deploy, set the real origin so Razorpay callbacks verify:
+#   fly secrets set PUBLIC_BASE_URL=https://<your-app>.fly.dev
+
+app = "agentic-bazaar"
+primary_region = "sin"           # Singapore — closest to India
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "4200"
+  HOST = "0.0.0.0"
+  EMBED_CATALOG = "true"
+  ACL_DATA_DIR = "/data"
+  DEMO_MODE = "true"             # flip to "false" once real keys + webhook are set
+  LLM_BASE_URL = "https://api.groq.com/openai/v1"
+  LLM_MODEL = "openai/gpt-oss-120b"
+  LLM_FALLBACK_MODELS = "llama-3.3-70b-versatile,llama-3.1-8b-instant"
+  CONFIRMATION_THRESHOLD_PAISE = "150000"
+
+[[mounts]]
+  source = "ledger"
+  destination = "/data"
+
+[http_service]
+  internal_port = 4200
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.checks]
+    [http_service.checks.health]
+      method = "GET"
+      path = "/health"
+      interval = "30s"
+      timeout = "4s"
+      grace_period = "15s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

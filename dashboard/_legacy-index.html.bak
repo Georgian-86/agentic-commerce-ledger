@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agentic Commerce — Trust Console</title>
+<style>
+  /*
+    Zero external font/library dependencies — this runs live at a demo
+    table where wifi may not be there. Hierarchy comes from weight,
+    size and spacing on a system-font stack, not a webfont.
+  */
+  :root{
+    --ink:#0B1220; --ink-soft:#4B5568; --ink-faint:#828CA2;
+    --bg:#F2F3F7; --surface:#FFFFFF; --surface-alt:#EDEFF5;
+    --border:#E1E4EC; --border-strong:#C9CEDB;
+
+    --primary:#4338CA; --primary-soft:#ECEBFB; --primary-ink:#362FA0;
+    --accent:#B84A0C; --accent-soft:#FAE7D8;
+
+    --ok:#15803D; --ok-soft:#E1F4E8;
+    --warn:#B45309; --warn-soft:#FAEDD2;
+    --crit:#B91C1C; --crit-soft:#FAE1E0;
+    --info:#0369A1; --info-soft:#DEF0FA;
+
+    --radius-sm:6px; --radius-md:10px; --radius-lg:14px;
+    --shadow-sm:0 1px 2px rgba(11,18,32,.05);
+    --shadow-md:0 8px 24px -12px rgba(11,18,32,.2);
+
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
+    --sans:-apple-system,"Segoe UI Variable","Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3{font-family:var(--sans);}
+  ::selection{background:var(--primary-soft);}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important;}}
+
+  /* ---------- Top bar ---------- */
+  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:1.25rem;padding:.7rem 1.15rem;background:var(--surface);border-bottom:1px solid var(--border);}
+  .brand{display:flex;align-items:center;gap:.6rem;flex-shrink:0;}
+  .brand-mark{width:32px;height:32px;border-radius:9px;flex-shrink:0;background:linear-gradient(155deg,var(--primary),#221E7A);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);}
+  .brand-name{font-size:.92rem;font-weight:700;letter-spacing:-.01em;line-height:1.1;}
+  .brand-sub{font-size:.7rem;color:var(--ink-faint);font-weight:500;}
+
+  .pipeline{display:flex;align-items:center;gap:.35rem;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;}
+  .pipeline::-webkit-scrollbar{display:none;}
+  .step{display:flex;align-items:center;gap:.4rem;white-space:nowrap;font-size:.74rem;font-weight:600;color:var(--ink-faint);padding:.28rem .5rem;border-radius:99px;transition:color .3s,background .3s;}
+  .step .dot{width:6px;height:6px;border-radius:50%;background:var(--border-strong);transition:background .3s,box-shadow .3s;}
+  .step.active{color:var(--primary-ink);background:var(--primary-soft);}
+  .step.active .dot{background:var(--primary);box-shadow:0 0 0 3px var(--primary-soft);}
+  .step.done{color:var(--ok);}
+  .step.done .dot{background:var(--ok);}
+  .pipe-line{width:12px;height:1px;background:var(--border-strong);flex-shrink:0;}
+
+  .status-cluster{display:flex;align-items:center;gap:.55rem;flex-shrink:0;}
+  .feed-dot{width:8px;height:8px;border-radius:50%;background:var(--ink-faint);flex-shrink:0;}
+  .feed-dot.live{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft);animation:pulse 2s infinite;}
+  .feed-dot.down{background:var(--crit);box-shadow:0 0 0 3px var(--crit-soft);}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.45;}}
+
+  .badge{font-size:.72rem;font-weight:700;padding:.3rem .6rem .3rem .48rem;border-radius:99px;display:inline-flex;align-items:center;gap:.38rem;border:1px solid transparent;}
+  .badge .b-dot{width:7px;height:7px;border-radius:50%;}
+  .badge.demo{background:var(--warn-soft);color:var(--warn);}
+  .badge.demo .b-dot{background:var(--warn);}
+  .badge.live{background:var(--ok-soft);color:var(--ok);}
+  .badge.live .b-dot{background:var(--ok);box-shadow:0 0 0 3px rgba(21,128,61,.18);}
+  .badge.pending{background:var(--surface-alt);color:var(--ink-faint);}
+  .badge.pending .b-dot{background:var(--ink-faint);}
+
+  .btn{font-family:var(--sans);font-size:.8rem;font-weight:600;padding:.42rem .8rem;border-radius:var(--radius-sm);border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);cursor:pointer;transition:border-color .15s,background .15s;white-space:nowrap;}
+  .btn:hover{border-color:var(--primary);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-ink);border-color:var(--primary-ink);}
+  .btn-danger{color:var(--crit);border-color:var(--crit-soft);}
+  .btn-danger:hover{border-color:var(--crit);background:var(--crit-soft);}
+  .btn-ghost{background:transparent;border-color:transparent;color:var(--ink-soft);padding:.3rem .5rem;}
+  .btn-ghost:hover{background:var(--surface-alt);border-color:transparent;}
+  .btn-sm{font-size:.72rem;padding:.28rem .55rem;}
+  .icon-btn{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);border:1px solid var(--border-strong);background:var(--surface);color:var(--ink-soft);cursor:pointer;}
+  .icon-btn:hover{border-color:var(--primary);color:var(--primary);}
+  .icon-btn.rec{color:var(--crit);border-color:var(--crit);animation:pulse 1.4s infinite;}
+
+  @media (max-width:900px){.pipeline{display:none;}}
+
+  /* ---------- Layout ---------- */
+  main{display:grid;gap:.9rem;padding:1rem;max-width:1500px;margin:0 auto;grid-template-columns:1.1fr 1fr;grid-template-areas:"chat trace" "chat ledger" "mandate ledger" "growth external";}
+  @media (max-width:1080px){main{grid-template-columns:1fr;grid-template-areas:"chat" "trace" "mandate" "ledger" "growth" "external";}}
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem;display:flex;flex-direction:column;min-height:0;box-shadow:var(--shadow-sm);}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.8rem;}
+  .panel-head h2{font-size:.76rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);margin:0;font-weight:700;}
+  .panel-head .meta{font-size:.72rem;color:var(--ink-faint);font-family:var(--mono);}
+  .panel-note{font-size:.76rem;color:var(--ink-faint);margin:-.3rem 0 .7rem;}
+
+  #p-chat{grid-area:chat;min-height:520px;max-height:760px;}
+  #p-trace{grid-area:trace;max-height:340px;}
+  #p-mandate{grid-area:mandate;}
+  #p-ledger{grid-area:ledger;max-height:560px;}
+  #p-growth{grid-area:growth;}
+  #p-external{grid-area:external;}
+
+  /* ---------- Chat ---------- */
+  .setup-row{display:flex;gap:.5rem;margin-bottom:.7rem;flex-wrap:wrap;}
+  .select{font-family:var(--sans);font-size:.82rem;padding:.42rem .6rem;border-radius:var(--radius-sm);border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);flex:1;min-width:180px;}
+  #session-bar{display:none;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.6rem;font-size:.78rem;color:var(--ink-soft);}
+  #session-bar .who{font-weight:600;color:var(--ink);}
+  #session-bar .key{font-family:var(--mono);font-size:.7rem;color:var(--ink-faint);}
+
+  .chat-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:.6rem;padding-right:.3rem;}
+  .msg{max-width:88%;padding:.55rem .8rem;border-radius:var(--radius-md);font-size:.88rem;white-space:pre-wrap;word-wrap:break-word;}
+  .msg.user{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:3px;}
+  .msg.agent{align-self:flex-start;background:var(--surface-alt);color:var(--ink);border-bottom-left-radius:3px;}
+  .msg.system{align-self:center;font-size:.76rem;color:var(--ink-faint);background:transparent;padding:.2rem;}
+
+  .plan-card{align-self:flex-start;max-width:92%;border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:var(--radius-sm);background:var(--surface);padding:.55rem .7rem;font-size:.78rem;}
+  .plan-card .plan-intent{font-weight:700;color:var(--primary-ink);text-transform:capitalize;font-size:.74rem;letter-spacing:.02em;}
+  .plan-card ol{margin:.3rem 0 0;padding-left:1.1rem;color:var(--ink-soft);}
+  .plan-card li{margin:.15rem 0;}
+  .plan-card .why{color:var(--ink-faint);}
+  .plan-card .locked{margin-top:.35rem;font-family:var(--mono);font-size:.68rem;color:var(--ink-faint);}
+
+  .typing{align-self:flex-start;display:flex;gap:.25rem;padding:.6rem .8rem;background:var(--surface-alt);border-radius:var(--radius-md);}
+  .typing span{width:6px;height:6px;border-radius:50%;background:var(--ink-faint);animation:blink 1.3s infinite;}
+  .typing span:nth-child(2){animation-delay:.2s;}
+  .typing span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,80%,100%{opacity:.25;}40%{opacity:1;}}
+
+  /* ---------- Cart ---------- */
+  .cart{border:1px solid var(--border);border-radius:var(--radius-md);padding:.75rem;margin-top:.6rem;background:var(--surface-alt);font-size:.82rem;}
+  .cart-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:.5rem;}
+  .cart-line{display:flex;justify-content:space-between;gap:.5rem;padding:.2rem 0;}
+  .cart-line .q{color:var(--ink-faint);font-family:var(--mono);font-size:.76rem;}
+  .cart-total{display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--border-strong);margin-top:.4rem;padding-top:.4rem;}
+  .cart-decision{margin-top:.5rem;padding:.5rem .6rem;border-radius:var(--radius-sm);font-size:.8rem;line-height:1.4;}
+  .cart-decision.approved{background:var(--ok-soft);color:var(--ok);}
+  .cart-decision.needs_confirmation{background:var(--warn-soft);color:var(--warn);}
+  .cart-decision.blocked{background:var(--crit-soft);color:var(--crit);}
+  .cart-decision.failed{background:var(--crit-soft);color:var(--crit);}
+  .cart-upsell{margin-top:.5rem;padding:.5rem .6rem;border:1px dashed var(--border-strong);border-radius:var(--radius-sm);font-size:.8rem;color:var(--ink-soft);}
+  .cart-upsell .rationale{font-family:var(--mono);font-size:.68rem;color:var(--ink-faint);margin-top:.2rem;}
+  .cart-actions{display:flex;gap:.4rem;margin-top:.6rem;flex-wrap:wrap;}
+
+  .input-row{display:flex;gap:.5rem;margin-top:.7rem;}
+  .input-row input{flex:1;font-family:var(--sans);font-size:.86rem;padding:.5rem .7rem;border-radius:var(--radius-sm);border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);}
+  .input-row input:focus{outline:2px solid var(--primary-soft);border-color:var(--primary);}
+
+  .empty{color:var(--ink-faint);font-size:.82rem;text-align:center;padding:2rem 1rem;line-height:1.6;}
+
+  /* ---------- Trace waterfall ---------- */
+  .trace-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:.5rem;min-height:0;}
+  .trace-turn{border:1px solid var(--border);border-radius:var(--radius-md);padding:.5rem .6rem;flex-shrink:0;}
+  .trace-turn-head{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;font-size:.78rem;}
+  .trace-turn-head .goal{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .trace-turn-head .dur{font-family:var(--mono);font-size:.7rem;color:var(--ink-faint);flex-shrink:0;}
+  .span-row{display:grid;grid-template-columns:14px 1fr auto;gap:.5rem;align-items:center;font-size:.76rem;padding:.18rem 0;}
+  .span-dot{width:8px;height:8px;border-radius:2px;}
+  .span-dot.reason{background:var(--primary);}
+  .span-dot.model{background:var(--info);}
+  .span-dot.tool{background:var(--accent);}
+  .span-dot.reflect{background:var(--warn);}
+  .span-dot.step{background:var(--ink-faint);}
+  .span-name{font-family:var(--mono);color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .span-name .tag{color:var(--ink-faint);}
+  .span-dur{font-family:var(--mono);font-size:.68rem;color:var(--ink-faint);}
+  .span-row.err .span-name{color:var(--crit);}
+  .span-bar{grid-column:2/4;height:3px;border-radius:2px;background:var(--surface-alt);overflow:hidden;margin-top:1px;}
+  .span-bar i{display:block;height:100%;background:var(--border-strong);}
+
+  /* ---------- Mandate ---------- */
+  .mandate-tabs{display:flex;gap:.3rem;margin-bottom:.7rem;flex-wrap:wrap;}
+  .mtab{font-size:.72rem;font-weight:600;padding:.3rem .55rem;border-radius:99px;border:1px solid var(--border);background:var(--surface);color:var(--ink-soft);cursor:pointer;}
+  .mtab.on{background:var(--primary-soft);border-color:var(--primary-soft);color:var(--primary-ink);}
+
+  .bal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin-bottom:.6rem;}
+  .bal-cell{background:var(--surface-alt);border-radius:var(--radius-sm);padding:.45rem .5rem;text-align:center;}
+  .bal-cell .k{font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);font-weight:700;}
+  .bal-cell .v{font-family:var(--mono);font-size:.82rem;font-weight:600;margin-top:.15rem;}
+  .bal-cell.spent .v{color:var(--ok);}
+  .bal-cell.held .v{color:var(--warn);}
+  .bal-cell.avail .v{color:var(--primary-ink);}
+
+  .bal-bar{height:8px;border-radius:99px;background:var(--surface-alt);overflow:hidden;display:flex;margin-bottom:.7rem;}
+  .bal-bar i{display:block;height:100%;}
+  .bal-bar .s{background:var(--ok);}
+  .bal-bar .h{background:var(--warn);}
+
+  .cred{font-family:var(--mono);font-size:.68rem;line-height:1.5;background:#0B1220;color:#D7DCE8;border-radius:var(--radius-sm);padding:.65rem .75rem;overflow-x:auto;max-height:210px;overflow-y:auto;white-space:pre;}
+  .cred .k{color:#8CC2FF;}
+  .cred .s{color:#8FE3B0;}
+  .cred .n{color:#F0B67F;}
+  .cred .sig{color:#E58F9E;}
+  .cred .tampered{background:var(--crit);color:#fff;padding:0 2px;border-radius:2px;}
+
+  .mandate-actions{display:flex;gap:.4rem;margin-top:.6rem;flex-wrap:wrap;}
+  .verdict{margin-top:.6rem;padding:.55rem .7rem;border-radius:var(--radius-sm);font-size:.8rem;line-height:1.45;display:none;}
+  .verdict.show{display:block;}
+  .verdict.ok{background:var(--ok-soft);color:var(--ok);}
+  .verdict.bad{background:var(--crit-soft);color:var(--crit);}
+
+  /* ---------- Ledger ---------- */
+  .chain-status{display:flex;align-items:center;gap:.5rem;padding:.5rem .65rem;border-radius:var(--radius-sm);font-size:.78rem;margin-bottom:.7rem;}
+  .chain-status.ok{background:var(--ok-soft);color:var(--ok);}
+  .chain-status.bad{background:var(--crit-soft);color:var(--crit);}
+  .chain-status .hh{font-family:var(--mono);font-size:.68rem;margin-left:auto;opacity:.8;}
+
+  .feed{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:.3rem;}
+  .ev{border:1px solid var(--border);border-radius:var(--radius-sm);padding:.45rem .6rem;font-size:.78rem;cursor:pointer;transition:border-color .15s;}
+  .ev:hover{border-color:var(--border-strong);}
+  .ev.flash{animation:evflash 1.5s ease-out;}
+  @keyframes evflash{0%{background:var(--warn-soft);border-color:var(--warn);}100%{background:var(--surface);}}
+  .ev-top{display:flex;align-items:center;gap:.4rem;}
+  .ev-chip{font-size:.6rem;font-weight:800;padding:.1rem .35rem;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;flex-shrink:0;}
+  .ev-chip.approved{background:var(--ok-soft);color:var(--ok);}
+  .ev-chip.blocked,.ev-chip.failed{background:var(--crit-soft);color:var(--crit);}
+  .ev-chip.needs_confirmation{background:var(--warn-soft);color:var(--warn);}
+  .ev-type{font-family:var(--mono);font-size:.7rem;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ev-actor{font-size:.64rem;color:var(--ink-faint);margin-left:auto;flex-shrink:0;}
+  .ev-seq{font-family:var(--mono);font-size:.62rem;color:var(--ink-faint);flex-shrink:0;}
+  .ev-reason{color:var(--ink-soft);margin-top:.2rem;font-size:.75rem;line-height:1.4;}
+  .ev-json{display:none;margin-top:.35rem;font-family:var(--mono);font-size:.66rem;background:#0B1220;color:#D7DCE8;border-radius:4px;padding:.5rem;white-space:pre;overflow-x:auto;max-height:180px;overflow-y:auto;}
+  .ev.open .ev-json{display:block;}
+  .ev-hash{font-family:var(--mono);font-size:.6rem;color:var(--ink-faint);margin-top:.2rem;}
+
+  /* ---------- Growth ---------- */
+  .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+  .kpi{background:var(--surface-alt);border-radius:var(--radius-md);padding:.6rem .7rem;}
+  .kpi .k{font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);font-weight:700;}
+  .kpi .v{font-size:1.15rem;font-weight:700;margin-top:.2rem;font-family:var(--mono);}
+  .kpi .sub{font-size:.68rem;color:var(--ink-faint);margin-top:.1rem;}
+  .kpi.gmv .v{color:var(--ok);}
+  .kpi.refused .v{color:var(--crit);}
+  .kpi.uplift .v{color:var(--primary-ink);}
+  .sample-note{font-size:.72rem;color:var(--ink-faint);margin-top:.6rem;font-style:italic;}
+
+  .demo-controls{margin-top:.7rem;border-top:1px dashed var(--border-strong);padding-top:.7rem;}
+  .demo-controls .cap{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:700;margin-bottom:.35rem;}
+  .demo-controls .row{display:flex;gap:.4rem;flex-wrap:wrap;}
+
+  /* ---------- External agents ---------- */
+  .ext-stat{display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;font-size:.82rem;}
+  .ext-stat .n{font-family:var(--mono);font-weight:700;font-size:1.1rem;color:var(--primary-ink);}
+  .code-block{font-family:var(--mono);font-size:.7rem;background:#0B1220;color:#D7DCE8;border-radius:var(--radius-sm);padding:.6rem .7rem;overflow-x:auto;white-space:pre;line-height:1.6;position:relative;}
+  .code-block .copy{position:absolute;top:.4rem;right:.4rem;}
+  .ext-list{margin-top:.6rem;display:flex;flex-direction:column;gap:.3rem;}
+  .ext-row{display:flex;justify-content:space-between;font-size:.74rem;font-family:var(--mono);color:var(--ink-soft);padding:.25rem .4rem;background:var(--surface-alt);border-radius:4px;}
+
+  .sec-line{display:flex;align-items:center;gap:.5rem;font-size:.78rem;padding:.4rem .55rem;border-radius:var(--radius-sm);background:var(--ok-soft);color:var(--ok);}
+  .sec-line.hit{background:var(--crit-soft);color:var(--crit);}
+
+  /* ---------- Toasts ---------- */
+  #toasts{position:fixed;top:70px;right:16px;z-index:50;display:flex;flex-direction:column;gap:.5rem;max-width:340px;}
+  .toast{background:var(--surface);border:1px solid var(--border-strong);border-left:3px solid var(--primary);border-radius:var(--radius-sm);padding:.6rem .8rem;font-size:.8rem;box-shadow:var(--shadow-md);animation:tin .3s ease-out;}
+  .toast.crit{border-left-color:var(--crit);}
+  .toast.ok{border-left-color:var(--ok);}
+  .toast.warn{border-left-color:var(--warn);}
+  .toast .tt{font-weight:700;font-size:.76rem;margin-bottom:.15rem;}
+  @keyframes tin{from{opacity:0;transform:translateX(12px);}to{opacity:1;transform:translateX(0);}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 5.5v6c0 5.2 3.4 9.7 8 11 4.6-1.3 8-5.8 8-11v-6L12 2Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="m8.5 12 2.4 2.4L15.5 9.6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">Agentic Bazaar</div>
+      <div class="brand-sub">Trust Console · Mandate → Gate → Ledger</div>
+    </div>
+  </div>
+
+  <nav class="pipeline" id="pipeline" aria-label="Request pipeline">
+    <div class="step" data-step="plan"><span class="dot"></span>Plan</div>
+    <div class="pipe-line"></div>
+    <div class="step" data-step="act"><span class="dot"></span>Act (MCP tools)</div>
+    <div class="pipe-line"></div>
+    <div class="step" data-step="gate"><span class="dot"></span>Gate</div>
+    <div class="pipe-line"></div>
+    <div class="step" data-step="reflect"><span class="dot"></span>Reflect</div>
+    <div class="pipe-line"></div>
+    <div class="step" data-step="settle"><span class="dot"></span>Settle</div>
+  </nav>
+
+  <div class="status-cluster">
+    <span class="feed-dot" id="feed-dot" title="Audit stream"></span>
+    <span id="rail-badge" class="badge pending"><span class="b-dot"></span>checking…</span>
+  </div>
+</header>
+
+<main>
+  <!-- ============ CHAT ============ -->
+  <section class="panel" id="p-chat">
+    <div class="panel-head">
+      <h2>Shopper Agent</h2>
+      <span class="meta">plan · act · observe · reflect</span>
+    </div>
+
+    <div class="setup-row" id="setup">
+      <select id="mandate-select" class="select" aria-label="Choose a mandate"></select>
+      <button id="start-btn" class="btn btn-primary">Start session</button>
+    </div>
+    <div id="session-bar">
+      <span><span class="who" id="session-who"></span> · <span class="key" id="session-key"></span></span>
+      <button id="reset-btn" class="btn-ghost btn-sm">New session</button>
+    </div>
+
+    <div id="chat-empty" class="empty">Pick a mandate and press <strong>Start session</strong>.<br/>The agent can only spend inside that mandate's signed limits — everything it does shows up in the trace and the ledger.</div>
+    <div class="chat-log" id="chat-log" style="display:none;"></div>
+    <div id="cart-slot"></div>
+
+    <div class="input-row" id="input-row" style="display:none;">
+      <input id="chat-input" placeholder="e.g. 'gifts under 1500', 'buy the candle duo'" disabled autocomplete="off" />
+      <button id="mic-btn" class="icon-btn" title="Voice input" aria-label="Voice input">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" stroke="currentColor" stroke-width="1.8"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <button id="send-btn" class="btn" disabled>Send</button>
+    </div>
+  </section>
+
+  <!-- ============ TRACE ============ -->
+  <section class="panel" id="p-trace">
+    <div class="panel-head">
+      <h2>Agent execution trace</h2>
+      <span class="meta" id="trace-meta">idle</span>
+    </div>
+    <p class="panel-note">Every turn is a plan, then tool calls against the catalog MCP server, then a grounding check on the reply. This is the real execution, not a spinner.</p>
+    <div class="trace-list" id="trace-list">
+      <div class="empty">No turns yet.</div>
+    </div>
+  </section>
+
+  <!-- ============ MANDATE ============ -->
+  <section class="panel" id="p-mandate">
+    <div class="panel-head">
+      <h2>Mandate credential</h2>
+      <span class="meta" id="mandate-key"></span>
+    </div>
+    <div class="mandate-tabs" id="mandate-tabs"></div>
+
+    <div class="bal-grid">
+      <div class="bal-cell"><div class="k">Cap</div><div class="v" id="bal-cap">—</div></div>
+      <div class="bal-cell spent"><div class="k">Settled</div><div class="v" id="bal-spent">—</div></div>
+      <div class="bal-cell held"><div class="k">On hold</div><div class="v" id="bal-held">—</div></div>
+      <div class="bal-cell avail"><div class="k">Available</div><div class="v" id="bal-avail">—</div></div>
+    </div>
+    <div class="bal-bar"><i class="s" id="bar-s" style="width:0"></i><i class="h" id="bar-h" style="width:0"></i></div>
+
+    <div class="cred" id="cred">select a mandate…</div>
+
+    <div class="mandate-actions">
+      <button id="tamper-btn" class="btn btn-danger btn-sm">Tamper &amp; present it →</button>
+      <button id="refresh-cred-btn" class="btn btn-ghost btn-sm">Show clean credential</button>
+    </div>
+    <div class="verdict" id="mandate-verdict"></div>
+  </section>
+
+  <!-- ============ LEDGER ============ -->
+  <section class="panel" id="p-ledger">
+    <div class="panel-head">
+      <h2>The Ledger</h2>
+      <span class="meta" id="feed-count">0 events</span>
+    </div>
+    <div class="chain-status ok" id="chain-status">
+      <span id="chain-text">chain not yet verified</span>
+      <span class="hh" id="chain-head"></span>
+    </div>
+    <div class="mandate-actions" style="margin:0 0 .7rem;">
+      <button id="verify-btn" class="btn btn-sm">Verify chain</button>
+      <button id="break-btn" class="btn btn-danger btn-sm">Break a record (edit the file)</button>
+    </div>
+    <div class="feed" id="feed"><div class="empty">No trust events yet.</div></div>
+  </section>
+
+  <!-- ============ GROWTH ============ -->
+  <section class="panel" id="p-growth">
+    <div class="panel-head">
+      <h2>Merchant P&amp;L — agent traffic</h2>
+      <span class="meta" id="llm-meta"></span>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi gmv"><div class="k">Settled GMV</div><div class="v" id="kpi-gmv">₹0</div><div class="sub" id="kpi-gmv-sub">0 orders cleared</div></div>
+      <div class="kpi uplift"><div class="k">Upsell uplift</div><div class="v" id="kpi-uplift">0%</div><div class="sub" id="kpi-uplift-sub">baseline vs actual</div></div>
+      <div class="kpi refused"><div class="k">Refused spend</div><div class="v" id="kpi-refused">₹0</div><div class="sub" id="kpi-refused-sub">0 blocked by the Gate</div></div>
+      <div class="kpi"><div class="k">Conversion</div><div class="v" id="kpi-conv">0%</div><div class="sub">sessions → paid</div></div>
+    </div>
+    <div class="sample-note" id="sample-note"></div>
+
+    <div class="demo-controls">
+      <div class="cap">Break-it-live controls</div>
+      <div class="row">
+        <button id="stockout-btn" class="btn btn-sm">Force AeroBuds stock-out</button>
+        <button id="restock-btn" class="btn btn-sm">Restock</button>
+        <button id="reset-demo-btn" class="btn btn-ghost btn-sm">Reset demo</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ EXTERNAL AGENTS ============ -->
+  <section class="panel" id="p-external">
+    <div class="panel-head">
+      <h2>External AI buyers</h2>
+      <span class="meta">MCP · /mcp</span>
+    </div>
+    <div class="ext-stat">
+      <span class="n" id="ext-count">0</span>
+      <span>agent session(s) connected right now</span>
+    </div>
+    <p class="panel-note">Any MCP client — Claude Desktop, MCP Inspector, another team's agent — can connect and buy. It shares no code with this merchant. The signed mandate and the Gate hold regardless.</p>
+    <div class="code-block" id="connect-cmd">npx @modelcontextprotocol/inspector<button class="btn btn-ghost btn-sm copy" data-copy="npx @modelcontextprotocol/inspector">copy</button>
+then connect to:  http://localhost:4200/mcp</div>
+
+    <div id="sec-slot" style="margin-top:.7rem;">
+      <div class="sec-line" id="sec-line">No prompt-injection attempts seen this session.</div>
+    </div>
+
+    <div class="ext-list" id="ext-list"></div>
+  </section>
+</main>
+
+<div id="toasts"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const API = "";
+let sessionId = null, currentMandateId = null, mandates = [], seenSeq = -1;
+let traces = new Map();      // trace_id -> { goal, spans:[], started, ended }
+let credTampered = false;
+
+const fmtPaise = (p) => "₹" + Math.round((p||0)/100).toLocaleString("en-IN");
+const esc = (s) => { const d=document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; };
+const timeOf = (ts) => new Date(ts).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+
+/* ---------- toasts ---------- */
+function toast(title, body, kind="") {
+  const el = document.createElement("div");
+  el.className = "toast " + kind;
+  el.innerHTML = `<div class="tt">${esc(title)}</div><div>${esc(body)}</div>`;
+  $("#toasts").appendChild(el);
+  setTimeout(() => { el.style.transition="opacity .4s"; el.style.opacity="0"; setTimeout(()=>el.remove(),400); }, 5200);
+}
+
+/* ---------- pipeline stepper ---------- */
+const STEPS = ["plan","act","gate","reflect","settle"];
+function setStage(stage) {
+  const i = STEPS.indexOf(stage);
+  document.querySelectorAll("#pipeline .step").forEach((el) => {
+    const j = STEPS.indexOf(el.dataset.step);
+    el.classList.toggle("active", j === i);
+    el.classList.toggle("done", j < i && i >= 0);
+  });
+}
+function stageForEvent(t) {
+  if (["session_started","user_message","turn_planned"].includes(t)) return "plan";
+  if (["order_drafted","buyer_policy_check","cart_repriced"].includes(t)) return "gate";
+  if (["checkout_approved","checkout_blocked","confirmation_required","cart_mandate_rejected","mandate_rejected"].includes(t)) return "gate";
+  if (["reply_rejected","prompt_injection_detected"].includes(t)) return "reflect";
+  if (["payment_verified","payment_duplicate_ignored","checkout_failed","hold_released","payment_refunded"].includes(t)) return "settle";
+  return null;
+}
+
+/* ================= SSE ================= */
+function connectStream() {
+  const es = new EventSource(API + "/audit/stream");
+  es.addEventListener("open", () => $("#feed-dot").className = "feed-dot live");
+  es.addEventListener("error", () => $("#feed-dot").className = "feed-dot down");
+  es.addEventListener("audit", (e) => onAuditEvent(JSON.parse(e.data)));
+  es.addEventListener("trace", (e) => onTraceEvent(JSON.parse(e.data)));
+}
+
+/* ---------- audit feed ---------- */
+function onAuditEvent(ev) {
+  const feed = $("#feed");
+  if (feed.querySelector(".empty")) feed.innerHTML = "";
+
+  const stage = stageForEvent(ev.event_type);
+  if (stage) setStage(stage);
+
+  const row = document.createElement("div");
+  row.className = "ev";
+  const critical = ev.severity === "critical" || ev.decision === "blocked" || ev.decision === "failed";
+  if (critical) row.classList.add("flash");
+  row.innerHTML = `
+    <div class="ev-top">
+      <span class="ev-seq">#${ev.seq}</span>
+      <span class="ev-chip ${ev.decision}">${ev.decision}</span>
+      <span class="ev-type">${esc(ev.event_type)}</span>
+      <span class="ev-actor">${esc(ev.actor)}</span>
+    </div>
+    <div class="ev-reason">${esc(ev.reason)}</div>
+    <div class="ev-hash">${ev.hash ? ev.hash.slice(0,16)+"…  ← "+ev.prev_hash.slice(0,10)+"…" : ""}</div>
+    <div class="ev-json">${esc(JSON.stringify(ev, null, 2))}</div>`;
+  row.addEventListener("click", () => row.classList.toggle("open"));
+  feed.prepend(row);
+  while (feed.children.length > 120) feed.lastChild.remove();
+
+  $("#feed-count").textContent = (ev.seq + 1) + " events";
+  $("#chain-head").textContent = "head " + (ev.hash ? ev.hash.slice(0,12)+"…" : "");
+
+  if (ev.event_type === "prompt_injection_detected") {
+    $("#sec-line").className = "sec-line hit";
+    $("#sec-line").textContent = ev.reason;
+    toast("Prompt injection caught", "Instruction-shaped text in catalog data was treated as data. The Gate never reads it anyway.", "crit");
+  }
+  if (ev.event_type === "reply_rejected")
+    toast("Reply sent back", "The agent quoted a figure not in any tool result. Grounding check bounced it.", "warn");
+  if (ev.event_type === "human_declined")
+    toast("Human declined", "A person refused the spend in their own client. Nothing was charged.", "warn");
+  if (ev.event_type === "checkout_failed")
+    toast("Checkout failed — handled", ev.reason, "crit");
+  if (ev.event_type === "webhook_rejected")
+    toast("Webhook rejected", "Bad signature — refused without being parsed.", "crit");
+  if (ev.decision === "blocked" && ev.event_type.includes("checkout"))
+    toast("Gate blocked a spend", ev.reason, "crit");
+
+  refreshMandates();
+  refreshMetrics();
+}
+
+/* ---------- trace waterfall ---------- */
+function onTraceEvent(t) {
+  if (t.kind === "trace_start") {
+    traces.set(t.trace_id, { goal: t.goal, spans: [], started: t.ts, plan: null });
+    renderTraces();
+  } else if (t.kind === "plan") {
+    const tr = traces.get(t.trace_id); if (tr) { tr.plan = t.steps; renderTraces(); }
+  } else if (t.kind === "span_start") {
+    const tr = traces.get(t.trace_id);
+    if (tr) { tr.spans.push({ id:t.span_id, name:t.name, type:t.type, started:t.ts, status:"running" }); renderTraces(); }
+  } else if (t.kind === "span_end") {
+    const tr = traces.get(t.trace_id);
+    if (tr) {
+      const sp = tr.spans.find((s) => s.id === t.span_id);
+      if (sp) { sp.status = t.status; sp.duration_ms = t.duration_ms; }
+      renderTraces();
+    }
+  } else if (t.kind === "trace_end") {
+    const tr = traces.get(t.trace_id);
+    if (tr) { tr.ended = t.ts; tr.duration_ms = t.duration_ms; tr.status = t.status; renderTraces(); }
+    $("#trace-meta").textContent = "idle";
+  }
+}
+
+function renderTraces() {
+  const list = $("#trace-list");
+  const arr = [...traces.values()].slice(-6).reverse();
+  if (!arr.length) { list.innerHTML = '<div class="empty">No turns yet.</div>'; return; }
+
+  const running = arr.find((t) => !t.ended);
+  if (running) $("#trace-meta").textContent = "running · " + running.spans.length + " spans";
+
+  list.innerHTML = arr.map((tr) => {
+    const maxDur = Math.max(1, ...tr.spans.map((s) => s.duration_ms || 0));
+    const spans = tr.spans.map((s) => {
+      const w = s.duration_ms ? Math.max(4, (s.duration_ms / maxDur) * 100) : 30;
+      const label = s.type === "tool" ? `<span class="tag">tool·</span>${esc(s.name)}`
+                  : s.type === "model" ? `<span class="tag">model·</span>${esc(s.name)}`
+                  : s.type === "reflect" ? `<span class="tag">reflect·</span>${esc(s.name)}`
+                  : s.type === "reason" ? `<span class="tag">plan·</span>${esc(s.name)}`
+                  : esc(s.name);
+      return `<div class="span-row ${s.status==='error'?'err':''}">
+        <span class="span-dot ${s.type}"></span>
+        <span class="span-name">${label}</span>
+        <span class="span-dur">${s.duration_ms != null ? s.duration_ms+"ms" : "···"}</span>
+        <span class="span-bar"><i style="width:${w}%"></i></span>
+      </div>`;
+    }).join("");
+    const planHtml = tr.plan ? `<div style="font-size:.7rem;color:var(--ink-faint);font-family:var(--mono);margin:.3rem 0 .1rem;">plan: ${tr.plan.map(esc).join(" → ")}</div>` : "";
+    return `<div class="trace-turn">
+      <div class="trace-turn-head">
+        <span class="goal">${esc(tr.goal)}</span>
+        <span class="dur">${tr.duration_ms != null ? (tr.duration_ms/1000).toFixed(1)+"s" : "running…"}</span>
+      </div>
+      ${planHtml}
+      ${spans}
+    </div>`;
+  }).join("");
+}
+
+/* ================= session ================= */
+async function loadMandates() {
+  mandates = await fetch(API + "/mandates").then((r) => r.json());
+  const sel = $("#mandate-select");
+  sel.innerHTML = mandates.map((m) => `<option value="${m.mandate_id}">${esc(m.label)}</option>`).join("");
+  renderMandateTabs();
+  if (!currentMandateId && mandates[0]) selectMandate(mandates[0].mandate_id);
+}
+
+async function refreshMandates() {
+  mandates = await fetch(API + "/mandates").then((r) => r.json());
+  if (currentMandateId) renderCredential();
+}
+
+function renderMandateTabs() {
+  $("#mandate-tabs").innerHTML = mandates.map((m) =>
+    `<button class="mtab ${m.mandate_id===currentMandateId?'on':''}" data-id="${m.mandate_id}">${esc(m.label.split("—")[0].trim())}</button>`
+  ).join("");
+  document.querySelectorAll(".mtab").forEach((b) => b.addEventListener("click", () => selectMandate(b.dataset.id)));
+}
+
+function selectMandate(id) {
+  currentMandateId = id;
+  credTampered = false;
+  $("#mandate-verdict").className = "verdict";
+  renderMandateTabs();
+  renderCredential();
+}
+
+function syntaxHl(json) {
+  return esc(json)
+    .replace(/"([^"]+)":/g, '<span class="k">"$1"</span>:')
+    .replace(/: "([^"]*)"/g, ': <span class="s">"$1"</span>')
+    .replace(/: (\d+)/g, ': <span class="n">$1</span>')
+    .replace(/"(signature|proof)"/g, '<span class="sig">"$1"</span>');
+}
+
+async function renderCredential() {
+  const m = mandates.find((x) => x.mandate_id === currentMandateId);
+  if (!m) return;
+  $("#mandate-key").textContent = m.signed_by;
+  const b = m.balance;
+  $("#bal-cap").textContent = fmtPaise(b.cap_paise);
+  $("#bal-spent").textContent = fmtPaise(b.spent_paise);
+  $("#bal-held").textContent = fmtPaise(b.held_paise);
+  $("#bal-avail").textContent = fmtPaise(b.available_paise);
+  $("#bar-s").style.width = (100 * b.spent_paise / b.cap_paise) + "%";
+  $("#bar-h").style.width = (100 * b.held_paise / b.cap_paise) + "%";
+
+  const cred = await fetch(API + "/mandates/" + m.mandate_id + "/credential").then((r) => r.json());
+  let text = JSON.stringify(cred.mandate, null, 2);
+  $("#cred").innerHTML = syntaxHl(text);
+}
+
+/* tamper demo */
+$("#tamper-btn").addEventListener("click", async () => {
+  const m = mandates.find((x) => x.mandate_id === currentMandateId);
+  if (!m) return;
+  setStage("gate");
+  const res = await fetch(API + "/mandates/" + m.mandate_id + "/tamper", {
+    method: "POST", headers: {"content-type":"application/json"},
+    body: JSON.stringify({ field: "max_amount_paise", value: 99999900, items: [{ product_id: "sku-014", qty: 1 }] })
+  }).then((r) => r.json());
+
+  // show the forged credential with the changed field highlighted
+  const cred = await fetch(API + "/mandates/" + m.mandate_id + "/credential").then((r) => r.json());
+  const forged = JSON.parse(JSON.stringify(cred.mandate));
+  forged.constraints.max_amount_paise = 99999900;
+  let text = JSON.stringify(forged, null, 2);
+  text = text.replace("99999900", "99999900   ⟵ changed, signature NOT re-signed");
+  $("#cred").innerHTML = syntaxHl(text).replace("99999900", '<span class="tampered">99999900</span>');
+  credTampered = true;
+
+  const v = $("#mandate-verdict");
+  v.className = "verdict show bad";
+  v.textContent = "Presented to the Gate → " + res.result.decision.toUpperCase() + ": " + res.result.reason;
+  toast("Tampered mandate rejected", "Cap changed to ₹9,99,999, signature left intact. The Gate verified it against the user's public key and refused.", "ok");
+});
+
+$("#refresh-cred-btn").addEventListener("click", () => { credTampered = false; $("#mandate-verdict").className = "verdict"; renderCredential(); });
+
+/* ================= chat ================= */
+$("#start-btn").addEventListener("click", startSession);
+$("#reset-btn").addEventListener("click", () => location.reload());
+$("#send-btn").addEventListener("click", send);
+$("#chat-input").addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+
+async function startSession() {
+  const mandate_id = $("#mandate-select").value;
+  const res = await fetch(API + "/session", {
+    method: "POST", headers: {"content-type":"application/json"},
+    body: JSON.stringify({ mandate_id })
+  }).then((r) => r.json());
+  if (res.error) return toast("Could not start", res.error, "crit");
+
+  sessionId = res.sessionId;
+  selectMandate(mandate_id);
+  $("#setup").style.display = "none";
+  $("#session-bar").style.display = "flex";
+  $("#session-who").textContent = res.mandate.label;
+  $("#session-key").textContent = "signed by " + res.mandate.signed_by;
+  $("#chat-empty").style.display = "none";
+  $("#chat-log").style.display = "flex";
+  $("#input-row").style.display = "flex";
+  $("#chat-input").disabled = false;
+  $("#send-btn").disabled = false;
+  $("#chat-input").focus();
+
+  if (res.memory && res.memory.length)
+    addSystem("Agent recalls " + res.memory.length + " fact(s) about this shopper from earlier sessions.");
+  setStage("plan");
+}
+
+function addMsg(role, text) {
+  const el = document.createElement("div");
+  el.className = "msg " + role;
+  el.textContent = text;
+  $("#chat-log").appendChild(el);
+  $("#chat-log").scrollTop = $("#chat-log").scrollHeight;
+  return el;
+}
+function addSystem(text) { addMsg("system", text); }
+
+function addPlanCard(plan) {
+  const el = document.createElement("div");
+  el.className = "plan-card";
+  el.innerHTML = `<div class="plan-intent">▸ ${esc(plan.intent)}</div>
+    <ol>${plan.steps.map((s) => `<li>${esc(s.action)}${s.why?` <span class="why">— ${esc(s.why)}</span>`:""}</li>`).join("")}</ol>`;
+  $("#chat-log").appendChild(el);
+  $("#chat-log").scrollTop = $("#chat-log").scrollHeight;
+}
+
+async function send() {
+  const input = $("#chat-input");
+  const text = input.value.trim();
+  if (!text || !sessionId) return;
+  input.value = "";
+  addMsg("user", text);
+
+  const typing = document.createElement("div");
+  typing.className = "typing";
+  typing.innerHTML = "<span></span><span></span><span></span>";
+  $("#chat-log").appendChild(typing);
+  $("#chat-log").scrollTop = $("#chat-log").scrollHeight;
+  $("#send-btn").disabled = true; input.disabled = true;
+
+  try {
+    const r = await fetch(API + "/chat", {
+      method: "POST", headers: {"content-type":"application/json"},
+      body: JSON.stringify({ sessionId, message: text })
+    }).then((res) => res.json());
+    typing.remove();
+
+    if (r.error) { addMsg("agent", r.detail || r.error); return; }
+    if (r.plan) addPlanCard(r.plan);
+    addMsg("agent", r.reply || "(no reply)");
+    renderCart(r.draft, r.confirmation);
+    if (r.critique && !r.critique.ok)
+      addSystem("Grounding check flagged this reply " + r.critique.findings.length + "×; it was corrected before you saw it.");
+  } catch (e) {
+    typing.remove();
+    addMsg("agent", "Network error reaching the agent. Nothing was charged.");
+  } finally {
+    $("#send-btn").disabled = false; input.disabled = false; input.focus();
+  }
+}
+
+/* ---------- cart ---------- */
+function renderCart(draft, confirmation) {
+  const slot = $("#cart-slot");
+  const c = confirmation || draft;
+  if (!c || (!c.items && !c.total_paise)) { slot.innerHTML = ""; return; }
+
+  const decision = c.decision || c.status;
+  const items = (c.items || []);
+  let actions = "";
+  if (c.status === "drafted" || decision === "approved" || decision === "needs_confirmation") {
+    if (c.order_draft_id && !c.payment_link)
+      actions = `<div class="cart-actions">
+        ${c.upsell_suggestion ? `<button class="btn btn-sm" onclick="confirmPay('${c.order_draft_id}',true)">Add upsell &amp; pay</button>` : ""}
+        <button class="btn btn-primary btn-sm" onclick="confirmPay('${c.order_draft_id}',false)">Confirm &amp; Pay ${fmtPaise(c.total_paise)}</button>
+      </div>`;
+  }
+  if (c.payment_link)
+    actions = `<div class="cart-actions"><a class="btn btn-primary btn-sm" href="${esc(c.payment_link)}" target="_blank" rel="noopener">Open payment page →</a></div>`;
+
+  slot.innerHTML = `<div class="cart">
+    <div class="cart-head"><span>Cart</span><span>${c.order_draft_id ? esc(c.order_draft_id) : ""}</span></div>
+    ${items.map((i) => `<div class="cart-line"><span>${esc(i.name)} <span class="q">×${i.qty}</span></span><span>${fmtPaise(i.line_total_paise)}</span></div>`).join("")}
+    ${c.total_paise ? `<div class="cart-total"><span>Total</span><span>${fmtPaise(c.total_paise)}</span></div>` : ""}
+    <div class="cart-decision ${decision}">${esc(c.reason || decision)}</div>
+    ${c.upsell_suggestion ? `<div class="cart-upsell">Suggested: ${esc(c.upsell_suggestion.name)} — ${fmtPaise(c.upsell_suggestion.price_paise)}<div class="rationale">${esc(c.upsell_suggestion.rationale || c.upsell_suggestion.reason)}</div></div>` : ""}
+    ${c.alternative ? `<div class="cart-upsell">Alternative: ${esc(c.alternative.name)} — ${fmtPaise(c.alternative.price_paise)}</div>` : ""}
+    ${actions}
+  </div>`;
+}
+
+window.confirmPay = async function (orderId, acceptUpsell) {
+  setStage("settle");
+  const r = await fetch(API + "/orders/" + orderId + "/confirm", {
+    method: "POST", headers: {"content-type":"application/json"},
+    body: JSON.stringify({ sessionId, accept_upsell: acceptUpsell })
+  }).then((res) => res.json());
+  renderCart(null, r);
+  if (r.status === "awaiting_payment") toast("Payment link created", "Budget is held, not spent. It settles when payment verifies.", "ok");
+  else if (r.status === "needs_confirmation") toast("Needs human approval", r.reason, "warn");
+  else if (r.status === "blocked") toast("Blocked", r.reason, "crit");
+};
+
+/* ================= metrics ================= */
+async function refreshMetrics() {
+  const m = await fetch(API + "/metrics").then((r) => r.json());
+  $("#kpi-gmv").textContent = fmtPaise(m.settled_gmv_paise);
+  $("#kpi-gmv-sub").textContent = m.orders_settled + " order" + (m.orders_settled===1?"":"s") + " cleared";
+  $("#kpi-uplift").textContent = (m.uplift_pct >= 0 ? "+" : "") + m.uplift_pct + "%";
+  $("#kpi-uplift-sub").textContent = m.upsells_accepted + "/" + m.upsells_offered + " upsells taken";
+  $("#kpi-refused").textContent = fmtPaise(m.refused_spend_paise);
+  $("#kpi-refused-sub").textContent = m.blocked_attempts + " blocked by the Gate";
+  $("#kpi-conv").textContent = m.conversion_pct + "%";
+  $("#sample-note").textContent = m.sample_note || "";
+  if (m.llm) $("#llm-meta").textContent = m.llm.total_tokens.toLocaleString() + " tok · " + m.llm.model.split("/").pop();
+
+  const health = await fetch(API + "/health").then((r) => r.json());
+  $("#ext-count").textContent = health.external_agents_connected ?? 0;
+  const rb = $("#rail-badge");
+  if (health.demo_mode) { rb.className = "badge demo"; rb.innerHTML = '<span class="b-dot"></span>DEMO MODE'; }
+  else { rb.className = "badge live"; rb.innerHTML = '<span class="b-dot"></span>RAZORPAY TEST'; }
+}
+
+/* ================= ledger verify / break ================= */
+$("#verify-btn").addEventListener("click", verifyChain);
+async function verifyChain() {
+  const v = await fetch(API + "/audit/verify").then((r) => r.json());
+  const el = $("#chain-status");
+  el.className = "chain-status " + (v.ok ? "ok" : "bad");
+  $("#chain-text").textContent = v.detail;
+  $("#chain-head").textContent = v.head_hash ? "head " + v.head_hash.slice(0,12)+"…" : "";
+  toast(v.ok ? "Chain intact" : "CHAIN BROKEN", v.detail, v.ok ? "ok" : "crit");
+}
+
+$("#break-btn").addEventListener("click", () => {
+  toast("How to break it", "Stop nothing — just open commerce-agent/data/audit-log.jsonl in an editor, change one character in any 'reason', save, and hit Verify chain. It will name the exact seq that broke.", "warn");
+});
+
+/* ================= demo controls ================= */
+$("#stockout-btn").addEventListener("click", async () => {
+  await fetch(API + "/debug/set-stock", { method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({ product_id:"sku-001", qty:0 }) });
+  toast("AeroBuds forced out of stock", "Next checkout that includes them will fail gracefully with an alternative.", "warn");
+});
+$("#restock-btn").addEventListener("click", async () => {
+  await fetch(API + "/debug/set-stock", { method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({ product_id:"sku-001", qty:40 }) });
+  toast("AeroBuds restocked", "Stock set back to 40.", "ok");
+});
+$("#reset-demo-btn").addEventListener("click", async () => {
+  if (!confirm("Reset the ledger, orders and metrics? (Shopper memory is kept.)")) return;
+  await fetch(API + "/debug/reset-demo", { method: "POST" });
+  location.reload();
+});
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll("[data-copy]").forEach((b) => b.addEventListener("click", () => {
+  navigator.clipboard?.writeText(b.dataset.copy);
+  b.textContent = "copied"; setTimeout(() => b.textContent = "copy", 1200);
+}));
+
+/* ================= voice ================= */
+(function voice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const btn = $("#mic-btn");
+  if (!SR) { btn.style.display = "none"; return; }
+  const rec = new SR();
+  rec.lang = "en-IN"; rec.interimResults = false; rec.maxAlternatives = 1;
+  let on = false;
+  btn.addEventListener("click", () => { on ? rec.stop() : rec.start(); });
+  rec.addEventListener("start", () => { on = true; btn.classList.add("rec"); });
+  rec.addEventListener("end", () => { on = false; btn.classList.remove("rec"); });
+  rec.addEventListener("result", (e) => {
+    $("#chat-input").value = e.results[0][0].transcript;
+    send();
+  });
+})();
+
+/* ================= boot ================= */
+connectStream();
+loadMandates();
+refreshMetrics();
+verifyChain();
+setInterval(refreshMetrics, 8000);
+</script>
+</body>
+</html>

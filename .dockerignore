@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+.git
+.env
+.env.local
+.env.development
+commerce-agent/data
+*.log
+npm-debug.log*
+dashboard/_legacy-index.html.bak
+.DS_Store
+Thumbs.db
+scratchpad

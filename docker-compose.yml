@@ -1,0 +1,37 @@
+# Run the whole thing on any box (VPS, laptop, a spare server):
+#
+#   cp .env.production.example .env   # fill in the three secrets
+#   docker compose up -d
+#   # open http://<host>:4200
+#
+# One container. The catalog MCP server runs inside it on loopback.
+
+services:
+  agentic-bazaar:
+    build: .
+    image: agentic-bazaar:latest
+    restart: unless-stopped
+    ports:
+      - "${BIND_PORT:-4200}:4200"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "4200"
+      HOST: 0.0.0.0
+      EMBED_CATALOG: "true"
+      ACL_DATA_DIR: /data
+      # Set this to the URL browsers/Razorpay will actually reach, e.g.
+      # https://bazaar.example.com — required for real payment callbacks.
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-}"
+    volumes:
+      - ledger:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4200/health"]
+      interval: 30s
+      timeout: 4s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  ledger:

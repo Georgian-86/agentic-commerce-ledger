@@ -1,0 +1,34 @@
+[
+  {
+    "mandate_id": "gift-2000",
+    "persona_id": "gift",
+    "label": "Gift shopper — ₹2,000 cap, gifting only",
+    "max_amount_paise": 200000,
+    "allowed_categories": ["gifting"],
+    "single_use": false,
+    "expires_in_hours": 48,
+    "issued_to": "shopper-priya"
+  },
+  {
+    "mandate_id": "repeat-5000",
+    "persona_id": "repeat",
+    "label": "Repeat buyer — ₹5,000 cap, all categories",
+    "max_amount_paise": 500000,
+    "allowed_categories": ["audio", "home", "apparel", "gifting"],
+    "single_use": false,
+    "expires_in_hours": 48,
+    "issued_to": "shopper-arun"
+  },
+  {
+    "mandate_id": "cautious-5000",
+    "persona_id": "cautious",
+    "label": "Cautious buyer — ₹5,000 cap, ₹1,000 per order, confirms above ₹800",
+    "max_amount_paise": 500000,
+    "max_per_order_paise": 100000,
+    "requires_confirmation_above_paise": 80000,
+    "allowed_categories": ["audio", "home", "apparel", "gifting"],
+    "single_use": false,
+    "expires_in_hours": 48,
+    "issued_to": "shopper-meera"
+  }
+]

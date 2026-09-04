@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en" data-app>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark light" />
+<meta name="description" content="Agentic Bazaar — a merchant any AI agent can transact with, under signed mandates, over a tamper-evident ledger." />
+<title>Agentic Bazaar · Trust Console</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="/css/tokens.css?b=22" />
+<link rel="stylesheet" href="/css/base.css?b=22" />
+<link rel="stylesheet" href="/css/components.css?b=22" />
+<link rel="stylesheet" href="/css/views.css?b=22" />
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%238B7CF6'/%3E%3Cpath d='M16 6 8 9.5v6c0 5 3.3 9.3 8 10.5 4.7-1.2 8-5.5 8-10.5v-6L16 6Z' fill='none' stroke='%23fff' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='m12 16 2.6 2.6L20 13' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+</head>
+<body>
+
+<!-- boot loader -->
+<div class="loader-full" id="boot">
+  <div class="stack center gap-3">
+    <div class="loader-mark"></div>
+    <div class="label" id="boot-msg">connecting to the trust layer…</div>
+  </div>
+</div>
+
+<header class="nav" id="nav" hidden>
+  <a class="nav-brand" href="#/" aria-label="Home">
+    <span class="nav-logo">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 4 5.5v6c0 5.2 3.4 9.7 8 11 4.6-1.3 8-5.8 8-11v-6L12 2Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="m8.5 12 2.4 2.4 4.6-4.8" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span class="nav-title">Agentic&nbsp;Bazaar</span>
+  </a>
+  <nav class="nav-links" id="nav-links">
+    <a class="nav-link" href="#/console">Console</a>
+    <a class="nav-link" href="#/ledger">Ledger</a>
+    <a class="nav-link" href="#/mandates">Mandates</a>
+    <a class="nav-link" href="#/agents">Agents</a>
+  </nav>
+  <div class="nav-right">
+    <button class="btn btn-ghost btn-sm" id="replay-tour" title="Replay the guided tour">Tour</button>
+    <button class="icon-btn tip" id="theme-toggle" data-tip="Toggle theme" aria-label="Toggle theme"></button>
+    <span class="pill pending" id="rail-pill"><span class="dot"></span>…</span>
+  </div>
+</header>
+
+<main class="shell" id="app"></main>
+
+<script type="module" src="/js/app.js"></script>
+<noscript><div style="padding:4rem;text-align:center;font-family:system-ui">This console needs JavaScript.</div></noscript>
+</body>
+</html>

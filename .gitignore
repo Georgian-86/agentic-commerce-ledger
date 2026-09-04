@@ -1,0 +1,19 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+
+# Runtime state. keys.json holds real Ed25519 private keys and must
+# never be committed — it is regenerated on first boot if missing.
+commerce-agent/data/
+!commerce-agent/data/.gitkeep
+
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# scratch / editor
+scratchpad/
+.vscode/
+.idea/

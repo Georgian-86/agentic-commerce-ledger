@@ -1,0 +1,27 @@
+{
+  "name": "razorpay-agentic-commerce",
+  "private": true,
+  "type": "module",
+  "version": "0.2.0",
+  "description": "Agentic Commerce Ledger — Razorpay Buildathon Track 01. A merchant any AI agent can transact with, under signed mandates and a tamper-evident ledger.",
+  "workspaces": ["catalog-server", "commerce-agent"],
+  "engines": {
+    "node": ">=18.18"
+  },
+  "scripts": {
+    "seed": "node seed/generate-catalog.js",
+    "build": "npm install && npm run seed",
+    "start": "node commerce-agent/src/index.js",
+    "dev": "concurrently -n catalog,commerce -c blue,magenta \"npm run dev -w catalog-server\" \"npm run dev -w commerce-agent\"",
+    "test:e2e": "node commerce-agent/test/e2e.js",
+    "test:trust": "node commerce-agent/test/trust.js",
+    "test:buyer": "node commerce-agent/test/external-buyer.js",
+    "test:all": "npm run test:trust && npm run test:e2e && npm run test:buyer",
+    "demo:reset": "node scripts/reset-demo.js",
+    "inspect:merchant": "npx --yes @modelcontextprotocol/inspector",
+    "verify:ledger": "node scripts/verify-ledger.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
