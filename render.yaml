@@ -3,12 +3,14 @@
 # Render → New → Blueprint → point at this repo. Render reads this file,
 # creates the service, and asks you to paste the three secret values.
 #
-# Free plan works but does NOT support a persistent disk — on free,
-# delete the `disk:` block and the `ACL_DATA_DIR` var below; the ledger
-# and keys then reset on each deploy (fine for a demo, and `npm run
-# demo:reset` does the same thing on purpose). The service also sleeps
-# after 15 min idle and cold-starts in ~30s. For an always-on demo with
-# persistence, set `plan: starter` and keep the disk.
+# Runs on the FREE plan as-is. The ledger + Ed25519 keys are ephemeral
+# (reset on each deploy — which is exactly what `npm run demo:reset`
+# does, so it's fine for a demo). The service also sleeps after 15 min
+# idle and cold-starts in ~30s.
+#
+# For an always-on demo with a persistent ledger: set `plan: starter`,
+# add `ACL_DATA_DIR=/data` to envVars, and add:
+#     disk: { name: ledger, mountPath: /data, sizeGB: 1 }
 
 services:
   - type: web
@@ -58,12 +60,3 @@ services:
       # keys above are set and you've configured the webhook.
       - key: DEMO_MODE
         value: "true"
-
-      # Persist the hash-chained ledger + Ed25519 keys across deploys.
-      - key: ACL_DATA_DIR
-        value: /data
-
-    disk:
-      name: ledger
-      mountPath: /data
-      sizeGB: 1
