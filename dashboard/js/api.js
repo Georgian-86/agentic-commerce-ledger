@@ -1,7 +1,11 @@
 // Thin fetch wrappers around the commerce-agent HTTP API.
 // Every call returns parsed JSON or throws an Error with a usable message.
-
-const BASE = "";
+//
+// BASE is "" (same origin) for the normal single-deploy setup. If you
+// CDN-host this dashboard separately, set `window.__API_BASE` to the
+// deployed API origin (e.g. in a tiny inline <script> before app.js).
+export const API_BASE = (typeof window !== "undefined" && window.__API_BASE) || "";
+const BASE = API_BASE;
 
 async function req(path, opts = {}) {
   const res = await fetch(BASE + path, {

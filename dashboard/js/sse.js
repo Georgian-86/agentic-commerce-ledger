@@ -4,6 +4,7 @@
 // hold a single connection regardless of how many views are mounted.
 
 import { store } from "./store.js";
+import { API_BASE } from "./api.js";
 
 const listeners = { audit: new Set(), trace: new Set(), status: new Set() };
 let es = null;
@@ -15,7 +16,7 @@ export function connectSSE() {
 }
 
 function open() {
-  es = new EventSource("/audit/stream");
+  es = new EventSource(API_BASE + "/audit/stream");
 
   es.addEventListener("open", () => {
     retry = 0;
