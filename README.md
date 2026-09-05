@@ -2,6 +2,12 @@
 
 **Razorpay Buildathon · Track 01 — AI Growth & Agentic Commerce**
 
+**Live: [agentic-bazaar.onrender.com](https://agentic-bazaar.onrender.com)** —
+deployed on Render, running real Razorpay **test-mode** payments end to
+end (webhook included). Free plan: sleeps after 15 min idle, so the first
+load can take ~30s to wake; the ledger and keys are ephemeral and reset
+on redeploy, so a fresh visit always opens on a clean, honest empty state.
+
 A merchant that any AI agent can transact with, end to end, without a human
 in the loop for small purchases and *with* one for large ones — held to a
 signed spending mandate the merchant can verify but never mint, over a
@@ -82,7 +88,7 @@ the track builds on. Test mode is free without limit.
          both idempotent)
 ```
 
-Two services:
+Two services, logically:
 
 - **`catalog-server/`** (:4100) — a real MCP server (Streamable HTTP,
   JSON-RPC 2.0). `search_products`, `get_product`, `check_inventory`,
@@ -93,11 +99,27 @@ Two services:
   ledger, and the dashboard as static files. The only service with
   secrets.
 
+**Two ways they run.** `npm run dev` starts them as two processes on
+`:4100` / `:4200` — closest to how a real merchant and a real catalog
+provider would actually be separate. The live deployment above (and
+every host config in [DEPLOY.md](DEPLOY.md)) runs **one process**
+instead: `commerce-agent` boots `catalog-server` in-process on a
+loopback port at startup (`EMBED_CATALOG=true`, the default) so a
+free-tier host only has to keep one service alive. The shopper agent
+still reaches the catalog only over MCP-over-HTTP either way — embedding
+changes the process topology, not the protocol boundary. Set
+`EMBED_CATALOG=false` plus a `CATALOG_SERVER_URL` to split them apart
+again on any host.
+
 ---
 
 ## Setup
 
-Requires Node 18+.
+Don't want to install anything first? →
+**[Try the live demo](https://agentic-bazaar.onrender.com)** — same
+code, real Razorpay test-mode payments (see the cold-start note above).
+
+To run it yourself, requires Node 18+.
 
 ```bash
 npm install
@@ -157,11 +179,14 @@ edit a byte of `commerce-agent/data/audit-log.jsonl` and run it.
 
 ## Connecting your own AI buyer
 
-The merchant speaks MCP. Point any client at `http://localhost:4200/mcp`:
+The merchant speaks MCP. Point any client at `http://localhost:4200/mcp` —
+or skip local setup entirely and point it at the live deployment,
+`https://agentic-bazaar.onrender.com/mcp`:
 
 ```bash
 npx @modelcontextprotocol/inspector
 # transport: Streamable HTTP   URL: http://localhost:4200/mcp
+#                          (or) https://agentic-bazaar.onrender.com/mcp
 ```
 
 Flow: `get_merchant_profile` → `request_mandate` (returns a signed token) →
