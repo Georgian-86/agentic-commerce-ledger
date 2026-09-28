@@ -51,6 +51,41 @@
   #replay-tour { display: none; }
 }
 
+/* ---- ≤640px: bottom tab bar, not a horizontal-scroll nav ----
+   `.nav` has no transform, so this fixed child resolves against the
+   viewport — no markup change needed. Solid background, no
+   backdrop-filter (see the paint-hazard note on `.nav` above). */
+@media (max-width: 640px) {
+  .nav-links {
+    position: fixed;
+    inset: auto 0 0 0;
+    margin: 0;
+    z-index: 100;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--surface-1);
+    border-top: 1px solid var(--line);
+    overflow: visible;
+  }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-link {
+    display: flex; align-items: center; justify-content: center;
+    height: 100%; min-height: 44px;
+    padding-inline: .25rem;
+    border-radius: 0;
+    text-align: center;
+  }
+  .nav-link.active { color: var(--iris); }
+  .nav-link.active::after {
+    left: 50%; right: auto; bottom: auto; top: 0;
+    width: 28px; height: 2px;
+    transform: translateX(-50%);
+  }
+}
+
 /* ---------------- Buttons ---------------- */
 .btn {
   --_bg: var(--surface-2);

@@ -20,7 +20,8 @@
     "demo:reset": "node scripts/reset-demo.js",
     "inspect:merchant": "npx --yes @modelcontextprotocol/inspector",
     "verify:ledger": "node scripts/verify-ledger.js",
-    "shots": "node scripts/screenshot.mjs"
+    "shots": "node scripts/screenshot.mjs",
+    "demo:video": "node scripts/demo-video.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

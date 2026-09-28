@@ -105,6 +105,11 @@ img, svg, canvas { display: block; max-width: 100%; }
   -webkit-overflow-scrolling: touch;
   z-index: 1;
 }
+@media (max-width: 640px) {
+  /* leave room for the fixed bottom tab bar (components.css) so the
+     last bit of page content isn't hidden behind it */
+  .shell { inset: var(--nav-h) 0 calc(var(--tabbar-h) + env(safe-area-inset-bottom)) 0; }
+}
 .page {
   max-width: var(--page-max);
   margin-inline: auto;
