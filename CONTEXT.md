@@ -5,6 +5,11 @@ everything. Keep it honest: when you change something structural (a new
 file, a changed contract, a new gotcha), update this file in the same
 sitting. A stale context file is worse than none.
 
+> **Also read:** `CLAUDE.md` (session entry point), `DELIVERABLES.md`
+> (what must ship), `DESIGN.md` (UI contract), and
+> `docs/design/ITERATION_LOOP.md` + `ITERATION_LOG.md` (how UI work is
+> iterated and where it left off).
+
 ## What this is
 
 **Agentic Commerce Ledger** — Razorpay Buildathon Track 01, "AI Growth &

@@ -19,9 +19,11 @@
     "test:all": "npm run test:trust && npm run test:e2e && npm run test:buyer",
     "demo:reset": "node scripts/reset-demo.js",
     "inspect:merchant": "npx --yes @modelcontextprotocol/inspector",
-    "verify:ledger": "node scripts/verify-ledger.js"
+    "verify:ledger": "node scripts/verify-ledger.js",
+    "shots": "node scripts/screenshot.mjs"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "concurrently": "^9.1.0",
+    "playwright": "^1.63.0"
   }
 }

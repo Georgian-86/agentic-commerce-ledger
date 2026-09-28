@@ -17,3 +17,6 @@ Thumbs.db
 scratchpad/
 .vscode/
 .idea/
+
+# design-iteration screenshots (findings live in docs/design/ITERATION_LOG.md)
+docs/design/shots/
