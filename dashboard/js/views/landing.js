@@ -36,6 +36,10 @@ export default {
     if (cv) {
       const known = heroHeight();
       const height = known ?? 0;
+      // tracks the most recent height we know to be true — bumped by real
+      // SSE audit events — so the async verifyChain() fallback below can
+      // never stomp on a height that has already moved forward.
+      let liveHeight = height;
       chain = createChain3D(cv, { max: 6, size: 0.6, spin: 0.0022, height });
       chain.start();
       paintHeroBadge(mount, height);
@@ -45,6 +49,11 @@ export default {
         api.verifyChain().then((v) => {
           if (!chain || !cv.isConnected) return; // view already torn down
           const h2 = v.length || 0;
+          // a live audit event may have already advanced past this
+          // now-stale snapshot (e.g. it raced this request) — never move
+          // the displayed height backwards.
+          if (h2 <= liveHeight) return;
+          liveHeight = h2;
           chain.destroy();
           chain = createChain3D(cv, { max: 6, size: 0.6, spin: 0.0022, height: h2 });
           chain.start();
@@ -52,8 +61,9 @@ export default {
         }).catch(() => {});
       }
       offAudit = sse.onAudit((ev) => {
+        liveHeight = ev.seq + 1;
         chain?.addBlock();
-        paintHeroBadge(mount, ev.seq + 1);
+        paintHeroBadge(mount, liveHeight);
       });
     }
 
