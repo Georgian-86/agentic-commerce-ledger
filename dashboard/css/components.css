@@ -103,6 +103,10 @@
 .btn:hover { transform: translateY(-1px); border-color: var(--iris-line); }
 .btn:active { transform: translateY(0) scale(.99); }
 .btn:disabled { opacity: .45; pointer-events: none; }
+/* aria-disabled (not the native attribute): stays hoverable/focusable so its
+   title/aria-describedby explanation is still reachable by mouse and AT;
+   the click handler itself no-ops. Used by #verify-btn — see ledger.js. */
+.btn[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
 .btn svg { width: 15px; height: 15px; }
 
 .btn-primary {

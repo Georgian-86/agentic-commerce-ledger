@@ -33,8 +33,10 @@ export default {
         h("span#chain-text", { text: "verifying…" }),
         h("span.hh#chain-head", { text: "" })),
       h("div.ledger-toolbar", {},
-        h("button.btn.btn-sm#verify-btn", { onclick: doVerify, disabled: true,
+        h("button.btn.btn-sm#verify-btn", { onclick: onVerifyClick, "aria-disabled": "true",
+          "aria-describedby": "verify-hint",
           title: "Nothing to verify until the first record is written" }, iconSpan(icons.check), " Verify chain"),
+        h("span.sr-only#verify-hint", { text: "Nothing to verify until the first record is written" }),
         h("button.btn.btn-sm.btn-danger", { onclick: showBreakGuide }, iconSpan(icons.alert), " How to break it"),
         h("div.grow"),
         h("div.ledger-filter#ledger-filter"),
@@ -162,9 +164,25 @@ function evRow(ev, flash) {
   return row;
 }
 
+// A verify call fires once per SSE audit event (plus manual clicks); with
+// several in flight, a slower earlier response could land after a newer
+// one and flip the banner/button back to a stale state. Guard with a
+// monotonic sequence number: after awaiting, bail if a newer call has
+// already been issued.
+let verifySeq = 0;
+const VERIFY_HINT = "Nothing to verify until the first record is written";
+
+function onVerifyClick() {
+  const btn = document.querySelector("#verify-btn");
+  if (btn?.getAttribute("aria-disabled") === "true") return; // no-op while empty
+  doVerify(false);
+}
+
 async function doVerify(silent) {
+  const mySeq = ++verifySeq;
   try {
     const v = await api.verifyChain();
+    if (mySeq !== verifySeq) return; // superseded by a later verify call
     store.set("chain", { ...v, seq: (v.length || 1) - 1 });
     const empty = v.length === 0;
     const el = document.querySelector("#chain-status");
@@ -175,11 +193,14 @@ async function doVerify(silent) {
     }
     const btn = document.querySelector("#verify-btn");
     if (btn) {
-      btn.disabled = empty;
-      btn.title = empty ? "Nothing to verify until the first record is written" : "";
+      btn.setAttribute("aria-disabled", empty ? "true" : "false");
+      btn.title = empty ? VERIFY_HINT : "";
     }
+    const hint = document.querySelector("#verify-hint");
+    if (hint) hint.textContent = empty ? VERIFY_HINT : "";
     if (!silent) toast(v.ok ? "Chain intact" : "CHAIN BROKEN", v.detail, v.ok ? "ok" : "crit");
   } catch (e) {
+    if (mySeq !== verifySeq) return;
     if (!silent) toast("Verify failed", e.message, "crit");
   }
 }
