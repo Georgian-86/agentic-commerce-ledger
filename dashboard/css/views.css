@@ -270,8 +270,9 @@
   display: flex; align-items: center; gap: .6rem; padding: .7rem .9rem;
   border-radius: var(--r-md); font-size: .82rem; margin-bottom: 1rem;
 }
-.chain-status.ok  { background: var(--ok-ghost); color: var(--ok); }
-.chain-status.bad { background: var(--crit-ghost); color: var(--crit); }
+.chain-status.ok      { background: var(--ok-ghost); color: var(--ok); }
+.chain-status.bad     { background: var(--crit-ghost); color: var(--crit); }
+.chain-status.neutral { background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--line); }
 .chain-status .hh { margin-left: auto; font-family: var(--font-mono); font-size: .7rem; opacity: .8; overflow-wrap: anywhere; min-width: 0; }
 
 .ledger-toolbar { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }

@@ -383,6 +383,8 @@
   padding: 2.5rem 1.5rem; font-size: .85rem; line-height: 1.7;
 }
 .empty svg { width: 34px; height: 34px; margin: 0 auto .7rem; opacity: .5; }
+.empty .empty-title { font-size: .95rem; font-weight: 600; color: var(--text-dim); margin-bottom: .35rem; }
+.empty .btn { margin-top: .9rem; }
 
 /* ---------------- Code / JSON block ---------------- */
 .code {

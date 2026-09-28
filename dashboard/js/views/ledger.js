@@ -7,6 +7,7 @@ import { toast } from "../ui/toast.js";
 import { openModal } from "../ui/modal.js";
 import { createChain3D } from "../gl/chain3d.js";
 import { skelLines } from "../ui/skeleton.js";
+import { navigate } from "../router.js";
 
 let chain = null;
 let offs = [];
@@ -28,11 +29,12 @@ export default {
           h("div#lh-height", { text: "chain height —" }),
           h("div.lh-caption#lh-caption", { hidden: true,
             text: "No records yet — start a session in the console to write the first one." }))),
-      h("div.chain-status.ok#chain-status", {},
+      h("div.chain-status.neutral#chain-status", {},
         h("span#chain-text", { text: "verifying…" }),
         h("span.hh#chain-head", { text: "" })),
       h("div.ledger-toolbar", {},
-        h("button.btn.btn-sm", { onclick: doVerify }, iconSpan(icons.check), " Verify chain"),
+        h("button.btn.btn-sm#verify-btn", { onclick: doVerify, disabled: true,
+          title: "Nothing to verify until the first record is written" }, iconSpan(icons.check), " Verify chain"),
         h("button.btn.btn-sm.btn-danger", { onclick: showBreakGuide }, iconSpan(icons.alert), " How to break it"),
         h("div.grow"),
         h("div.ledger-filter#ledger-filter"),
@@ -61,6 +63,9 @@ export default {
       const cnt = document.querySelector("#feed-count");
       if (cnt) cnt.textContent = (ev.seq + 1) + " records";
       setChainHeight(ev.seq + 1);
+      // re-verify against the server so the banner and button reflect the
+      // real chain state (not an optimistic guess) once a record exists.
+      doVerify(true);
     }));
   },
   destroy() { chain?.destroy(); chain = null; offs.forEach((f) => f()); offs = []; },
@@ -116,8 +121,19 @@ function repaintFeed() {
   clear(feed);
   const events = (store.get("events") || []).slice().reverse()
     .filter((e) => filter === "all" || e.decision === filter);
-  if (!events.length) { feed.appendChild(h("div.empty", { text: "No records match this filter yet." })); return; }
+  if (!events.length) { feed.appendChild(feedEmpty()); return; }
   for (const ev of events.slice(0, 160)) feed.appendChild(evRow(ev));
+}
+
+function feedEmpty() {
+  if (filter === "all") {
+    return h("div.empty", {},
+      h("div.empty-title", { text: "No records yet" }),
+      h("p", { text: "Every Gate decision, hold and payment lands here the moment it happens." }),
+      h("button.btn.btn-sm", { onclick: () => navigate("/console") }, "Open the console →"));
+  }
+  const label = (CATS.find(([val]) => val === filter)?.[1] || filter).toLowerCase();
+  return h("div.empty", { text: `No ${label} records yet.` });
 }
 
 function prependEvent(ev, flash) {
@@ -150,11 +166,17 @@ async function doVerify(silent) {
   try {
     const v = await api.verifyChain();
     store.set("chain", { ...v, seq: (v.length || 1) - 1 });
+    const empty = v.length === 0;
     const el = document.querySelector("#chain-status");
     if (el) {
-      el.className = "chain-status " + (v.ok ? "ok" : "bad");
+      el.className = "chain-status " + (empty ? "neutral" : (v.ok ? "ok" : "bad"));
       document.querySelector("#chain-text").textContent = v.detail;
       document.querySelector("#chain-head").textContent = v.head_hash ? "head " + v.head_hash.slice(0, 14) + "…" : "";
+    }
+    const btn = document.querySelector("#verify-btn");
+    if (btn) {
+      btn.disabled = empty;
+      btn.title = empty ? "Nothing to verify until the first record is written" : "";
     }
     if (!silent) toast(v.ok ? "Chain intact" : "CHAIN BROKEN", v.detail, v.ok ? "ok" : "crit");
   } catch (e) {
