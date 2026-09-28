@@ -25,17 +25,25 @@ export default {
     ].filter(Boolean)));
 
     const chatPanel = h("section.panel.chat-panel", {},
-      h("div.panel-head", {}, h("h3", { text: "Shopper agent" }), h("span.label", { text: "plan · act · observe · reflect" })),
+      h("div.panel-head", {}, h("h3", { text: "Shopper agent" })),
+      pipeline,
       chatSetup(mandates),
       h("div.stack.grow", { style: { minHeight: 0 } },
         h("div.chat-log#chat-log", { hidden: true }),
-        h("div#chat-empty.empty", { html: "Pick a shopper above and press <strong>Start session</strong>.<br/>The agent can only spend inside that shopper's signed mandate." }),
+        h("div#chat-empty.empty", {},
+          h("p#chat-empty-copy", { html: "Pick a shopper above and press <strong>Start session</strong>.<br/>The agent can only spend inside that shopper's signed mandate." }),
+          h("div.prompt-chips", {},
+            promptChip("Gifts under ₹1,500", "gifts under 1500"),
+            promptChip("Buy the candle duo", "buy the candle duo"),
+            promptChip("Try to spend ₹5,000", "buy something for 5000"),
+          ),
+        ),
       ),
       h("div#cart-slot"),
       chatInput(),
     );
 
-    const main = h("div.console-main", {}, pipeline, chatPanel);
+    const main = h("div.console-main", {}, chatPanel);
 
     /* ---- right: mini-mandate + trace ---- */
     const side = h("div.console-side", {},
@@ -130,6 +138,24 @@ function micButton(input, onFinal) {
   return btn;
 }
 
+function promptChip(label, sendText) {
+  const btn = h("button.prompt-chip", { type: "button", text: label });
+  btn.addEventListener("click", () => handleChipClick(sendText));
+  return btn;
+}
+
+async function handleChipClick(text) {
+  if (!state.sessionId) {
+    const sel = document.querySelector("#mandate-pick");
+    await startSession(sel.value);
+    if (!state.sessionId) return; // start failed — toast already shown
+  }
+  const input = document.querySelector("#chat-input");
+  if (!input || input.disabled) return;
+  input.value = text;
+  await doSend(input);
+}
+
 function mm(k, id, cls = "") {
   return h("div.mm", { class: cls }, h("div.k", { text: k }), h("div.v", { id, text: "—" }));
 }
@@ -153,7 +179,10 @@ async function startSession(mandate_id, isRetry = false) {
       h("button.btn.btn-ghost.btn-sm", { text: "New session", onclick: () => navigate("/console") }),
     );
 
-    document.querySelector("#chat-empty").hidden = true;
+    // Keep the empty state's prompt chips available until the first
+    // message is actually sent — only the "pick a shopper" copy goes away.
+    const emptyCopy = document.querySelector("#chat-empty-copy");
+    if (emptyCopy) emptyCopy.hidden = true;
     const log = document.querySelector("#chat-log");
     log.hidden = false;
     if (res.memory?.length) addBubble(log, "sys", `Agent recalls ${res.memory.length} fact(s) about this shopper from earlier sessions.`);
@@ -184,6 +213,8 @@ async function doSend(input) {
   const text = input.value.trim();
   if (!text || !state.sessionId) return;
   input.value = "";
+  const emptyEl = document.querySelector("#chat-empty");
+  if (emptyEl) emptyEl.hidden = true;
   const log = document.querySelector("#chat-log");
   addBubble(log, "user", text);
 
