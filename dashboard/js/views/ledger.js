@@ -24,7 +24,10 @@ export default {
         h("p.lede", { text: "Every trust-layer decision, linked to the one before it. Verify the chain from genesis on demand — or break it yourself and watch the check catch it." })),
       h("div.ledger-hero", {},
         h("canvas#ledger-canvas", { "aria-hidden": "true" }),
-        h("div.lh-overlay", { id: "lh-overlay", text: "chain height —" })),
+        h("div.lh-overlay#lh-overlay", {},
+          h("div#lh-height", { text: "chain height —" }),
+          h("div.lh-caption#lh-caption", { hidden: true,
+            text: "No records yet — start a session in the console to write the first one." }))),
       h("div.chain-status.ok#chain-status", {},
         h("span#chain-text", { text: "verifying…" }),
         h("span.hh#chain-head", { text: "" })),
@@ -41,22 +44,23 @@ export default {
     );
     mount.appendChild(page);
 
+    buildFilter(page);
+    // load real events first so the 3D chain never draws a height the
+    // server doesn't have — no placeholder-then-pop-in of fake blocks.
+    const height = await loadEvents();
+    await doVerify(true);
+
     // 3D banner
     const cv = page.querySelector("#ledger-canvas");
-    chain = createChain3D(cv, { count: 8, size: 0.5, spin: 0.0016, arc: 0.2 });
+    chain = createChain3D(cv, { max: 8, size: 0.5, spin: 0.0016, arc: 0.2, height });
     chain.start();
-
-    buildFilter(page);
-    await loadEvents();
-    await doVerify(true);
 
     offs.push(sse.onAudit((ev) => {
       chain?.addBlock();
       prependEvent(ev, true);
       const cnt = document.querySelector("#feed-count");
       if (cnt) cnt.textContent = (ev.seq + 1) + " records";
-      const ov = document.querySelector("#lh-overlay");
-      if (ov) ov.textContent = "chain height " + (ev.seq + 1);
+      setChainHeight(ev.seq + 1);
     }));
   },
   destroy() { chain?.destroy(); chain = null; offs.forEach((f) => f()); offs = []; },
@@ -87,14 +91,23 @@ async function loadEvents() {
     const events = await api.audit("limit=200");
     store.set("events", events);
     repaintFeed();
+    const height = (events[events.length - 1]?.seq + 1) || 0;
     const cnt = document.querySelector("#feed-count");
-    if (cnt) cnt.textContent = (events[events.length - 1]?.seq + 1 || 0) + " records";
-    const ov = document.querySelector("#lh-overlay");
-    if (ov) ov.textContent = "chain height " + (events[events.length - 1]?.seq + 1 || 0);
+    if (cnt) cnt.textContent = height + " records";
+    setChainHeight(height);
+    return height;
   } catch (e) {
     const feed = document.querySelector("#feed");
     if (feed) clear(feed).appendChild(h("div.empty", { text: "Couldn't load the ledger. Is the server running?" }));
+    return 0;
   }
+}
+
+function setChainHeight(n) {
+  const hEl = document.querySelector("#lh-height");
+  if (hEl) hEl.textContent = "chain height " + n;
+  const cap = document.querySelector("#lh-caption");
+  if (cap) cap.hidden = n !== 0;
 }
 
 function repaintFeed() {

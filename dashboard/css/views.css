@@ -260,8 +260,11 @@
 }
 .ledger-hero canvas { width: 100%; height: 100%; }
 .ledger-hero .lh-overlay {
-  position: absolute; left: 1.25rem; bottom: 1rem;
+  position: absolute; left: 1.25rem; bottom: 1rem; right: 1.25rem;
   font-family: var(--font-mono); font-size: .72rem; color: var(--text-faint);
+}
+.ledger-hero .lh-caption {
+  margin-top: .3rem; font-size: .72rem; color: var(--text-faint); max-width: 26rem;
 }
 .chain-status {
   display: flex; align-items: center; gap: .6rem; padding: .7rem .9rem;

@@ -60,7 +60,11 @@ export function runOnboarding({ force = false } = {}) {
     if (kind === "chain" || kind === "shield") {
       const cv = h("canvas", { style: { width: "100%", height: "100%" } });
       artHost.appendChild(cv);
-      chain = createChain3D(cv, { count: kind === "shield" ? 5 : 6, size: 0.5, interactive: false, spin: 0.004 });
+      // purely decorative illustration, not tied to the real ledger —
+      // pass height explicitly so it renders as a full chain, not the
+      // honest-empty placeholder that `height: 0` would draw elsewhere.
+      const n = kind === "shield" ? 5 : 6;
+      chain = createChain3D(cv, { count: n, height: n, size: 0.5, interactive: false, spin: 0.004 });
       chain.start();
       if (kind === "shield") setTimeout(() => chain?.addBlock(), 500);
     } else {

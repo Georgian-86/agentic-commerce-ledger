@@ -15,7 +15,13 @@ export function createChain3D(canvas, opts = {}) {
   const ctx = canvas.getContext("2d");
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const cfg = {
-    count: opts.count ?? 6,
+    // `max` caps how many blocks are ever drawn; `count` is kept as an
+    // alias so older callers (decorative, non-data-bound illustrations)
+    // keep working unchanged.
+    max: opts.max ?? opts.count ?? 6,
+    // the real number of ledger records. 0 means an honest-to-god empty
+    // chain — we never draw blocks the server doesn't have.
+    height: opts.height ?? 0,
     size: opts.size ?? 0.62,
     gap: opts.gap ?? 1.5,
     arc: opts.arc ?? 0.34,
@@ -36,11 +42,22 @@ export function createChain3D(canvas, opts = {}) {
   let raf = 0;
   let running = false;
 
-  for (let i = 0; i < cfg.count; i++) blocks.push(mkBlock(i, 1));
+  initBlocks(cfg.height);
 
-  function mkBlock(i, life) {
-    return { i, life, seal: 0 };
+  function mkBlock(i, life, placeholder = false) {
+    return { i, life, seal: 0, placeholder };
   }
+
+  // (Re)populates `blocks` from a real record count. 0 records draws a
+  // single dashed genesis placeholder instead of `max` fake blocks.
+  function initBlocks(height) {
+    blocks.length = 0;
+    const n = Math.max(0, Math.min(height, cfg.max));
+    if (n === 0) { blocks.push(mkBlock(0, 1, true)); return; }
+    for (let i = 0; i < n; i++) blocks.push(mkBlock(i, 1, false));
+  }
+
+  function isEmpty() { return blocks.length === 1 && blocks[0].placeholder; }
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
@@ -80,7 +97,7 @@ export function createChain3D(canvas, opts = {}) {
     return { v, faces };
   })();
 
-  function drawCube(center, s, alpha, sealGlow) {
+  function drawCube(center, s, alpha, sealGlow, placeholder) {
     const verts = CUBE.v.map((p) => project([center[0] + p[0] * s, center[1] + p[1] * s, center[2] + p[2] * s]));
     const polys = CUBE.faces.map((f) => {
       const pts = f.map((i) => verts[i]);
@@ -88,6 +105,7 @@ export function createChain3D(canvas, opts = {}) {
       return { pts, zAvg };
     }).sort((a, b) => b.zAvg - a.zAvg);
 
+    if (placeholder) ctx.setLineDash([5, 5]);
     for (let fi = 0; fi < polys.length; fi++) {
       const { pts } = polys[fi];
       const front = fi >= 3;
@@ -95,16 +113,22 @@ export function createChain3D(canvas, opts = {}) {
       ctx.moveTo(pts[0][0], pts[0][1]);
       for (let i = 1; i < 4; i++) ctx.lineTo(pts[i][0], pts[i][1]);
       ctx.closePath();
-      ctx.fillStyle = front ? withAlpha(cfg.accent, 0.05 * alpha) : cfg.faint;
-      ctx.fill();
+      if (placeholder) {
+        // low-alpha outline only — no fill, no seal glow, honest "nothing here yet"
+        ctx.strokeStyle = withAlpha(cfg.accent, (front ? 0.4 : 0.2) * alpha);
+      } else {
+        ctx.fillStyle = front ? withAlpha(cfg.accent, 0.05 * alpha) : cfg.faint;
+        ctx.fill();
+        ctx.strokeStyle = sealGlow > 0.01
+          ? blend(cfg.accent, cfg.mint, sealGlow)
+          : withAlpha(cfg.accent, (front ? 0.9 : 0.35) * alpha);
+      }
       ctx.lineWidth = front ? 1.4 : 0.8;
-      ctx.strokeStyle = sealGlow > 0.01
-        ? blend(cfg.accent, cfg.mint, sealGlow)
-        : withAlpha(cfg.accent, (front ? 0.9 : 0.35) * alpha);
       ctx.stroke();
     }
+    if (placeholder) ctx.setLineDash([]);
 
-    if (sealGlow > 0.01) {
+    if (!placeholder && sealGlow > 0.01) {
       const c = project(center);
       const g = ctx.createRadialGradient(c[0], c[1], 0, c[0], c[1], 60 * sealGlow);
       g.addColorStop(0, withAlpha(cfg.mint, 0.5 * sealGlow));
@@ -163,7 +187,7 @@ export function createChain3D(canvas, opts = {}) {
       .sort((a, z) => z.z - a.z);
     for (const { b, c } of order) {
       const s = cfg.size * (0.4 + 0.6 * easeOut(b.life));
-      drawCube(c, s, b.life, b.seal);
+      drawCube(c, s, b.life, b.seal, b.placeholder);
     }
 
     raf = requestAnimationFrame(frame);
@@ -185,17 +209,22 @@ export function createChain3D(canvas, opts = {}) {
     const n = blocks.length;
     const centers = blocks.map((b) => blockCenter(b.i, n));
     for (let i = 0; i < n - 1; i++) drawLink(centers[i], centers[i + 1], 0);
-    centers.map((c, i) => ({ c, z: project(c)[2] })).sort((a, b) => b.z - a.z)
-      .forEach(({ c }) => drawCube(c, cfg.size, 1, 0));
+    centers.map((c, i) => ({ c, i, z: project(c)[2] })).sort((a, b) => b.z - a.z)
+      .forEach(({ c, i }) => drawCube(c, cfg.size, 1, 0, blocks[i].placeholder));
   }
   function stop() { running = false; cancelAnimationFrame(raf); }
 
   function addBlock() {
-    const nextI = (blocks[blocks.length - 1]?.i ?? -1) + 1;
-    blocks.push(mkBlock(nextI, 0));
-    if (blocks.length > cfg.count) blocks.shift();
-    // reindex so the arc formula stays centred
-    blocks.forEach((b, k) => (b.i = k));
+    if (isEmpty()) {
+      // the first real record replaces the genesis placeholder
+      blocks[0] = mkBlock(0, 0, false);
+    } else {
+      const nextI = (blocks[blocks.length - 1]?.i ?? -1) + 1;
+      blocks.push(mkBlock(nextI, 0));
+      if (blocks.length > cfg.max) blocks.shift();
+      // reindex so the arc formula stays centred
+      blocks.forEach((b, k) => (b.i = k));
+    }
     // ripple a seal pulse from head backwards
     blocks[blocks.length - 1].seal = 1;
     let k = blocks.length - 2;
@@ -204,6 +233,12 @@ export function createChain3D(canvas, opts = {}) {
       if (blocks[k]) blocks[k].seal = 0.7;
       k--;
     }, 70);
+    if (REDUCE) frameOnce();
+  }
+
+  // back to the empty genesis placeholder (e.g. after a demo reset)
+  function reset() {
+    initBlocks(0);
     if (REDUCE) frameOnce();
   }
 
@@ -226,7 +261,7 @@ export function createChain3D(canvas, opts = {}) {
     window.removeEventListener("pointermove", onPointer);
   }
 
-  return { start, stop, addBlock, destroy, setCount: (c) => (cfg.count = c) };
+  return { start, stop, addBlock, reset, destroy, setCount: (c) => (cfg.max = c) };
 }
 
 // --- colour utils ---

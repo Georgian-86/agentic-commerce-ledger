@@ -31,12 +31,30 @@ export default {
       foot(),
     );
 
-    // 3D
+    // 3D — draw exactly as many blocks as the server actually has.
     const cv = mount.querySelector("#hero-canvas");
     if (cv) {
-      chain = createChain3D(cv, { count: 6, size: 0.6, spin: 0.0022 });
+      const known = heroHeight();
+      const height = known ?? 0;
+      chain = createChain3D(cv, { max: 6, size: 0.6, spin: 0.0022, height });
       chain.start();
-      offAudit = sse.onAudit(() => chain?.addBlock());
+      paintHeroBadge(mount, height);
+      if (known == null) {
+        // metrics hadn't loaded yet — don't block first paint on it, just
+        // correct the chain and badge once we know the real height.
+        api.verifyChain().then((v) => {
+          if (!chain || !cv.isConnected) return; // view already torn down
+          const h2 = v.length || 0;
+          chain.destroy();
+          chain = createChain3D(cv, { max: 6, size: 0.6, spin: 0.0022, height: h2 });
+          chain.start();
+          paintHeroBadge(mount, h2);
+        }).catch(() => {});
+      }
+      offAudit = sse.onAudit((ev) => {
+        chain?.addBlock();
+        paintHeroBadge(mount, ev.seq + 1);
+      });
     }
 
     // live ticker updates
@@ -69,10 +87,24 @@ function hero() {
     ),
     h("div.hero-canvas-wrap", {},
       h("canvas#hero-canvas", { "aria-hidden": "true" }),
-      h("div.hero-canvas-badge", { text: "hash-chained ledger · live" }),
+      h("div.hero-canvas-badge#hero-canvas-badge", { text: "hash-chained ledger · empty · waiting for the first record" }),
     ),
   );
   return el;
+}
+
+// height = seq + 1; the server reports seq -1 for a brand-new chain.
+function heroHeight() {
+  const seq = store.get("metrics")?.chain?.seq;
+  return typeof seq === "number" ? Math.max(0, seq + 1) : null;
+}
+
+function paintHeroBadge(root, n) {
+  const el = root.querySelector("#hero-canvas-badge");
+  if (!el) return;
+  el.textContent = n > 0
+    ? `hash-chained ledger · ${n} record${n === 1 ? "" : "s"} · live`
+    : "hash-chained ledger · empty · waiting for the first record";
 }
 
 function section(id, title, lede, content) {
