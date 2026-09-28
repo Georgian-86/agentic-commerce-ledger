@@ -175,7 +175,7 @@
 }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
 .panel-head h3 { font-family: var(--font-display); font-size: .95rem; font-weight: 600; letter-spacing: -.01em; }
-.panel-head .label { flex-shrink: 0; }
+.panel-head .label { flex-shrink: 1; min-width: 0; text-align: right; }
 
 .glow-card {
   position: relative;
@@ -389,7 +389,7 @@
   font-family: var(--font-mono); font-size: .74rem; line-height: 1.7;
   background: var(--surface-0); color: var(--text-dim);
   border: 1px solid var(--line); border-radius: var(--r-md);
-  padding: .85rem 1rem; overflow-x: auto; white-space: pre;
+  padding: .85rem 1rem; overflow-x: auto; white-space: pre; max-width: 100%;
 }
 .code .k { color: var(--iris-bright); }
 .code .s { color: var(--mint); }

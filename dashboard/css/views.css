@@ -101,6 +101,9 @@
 .path-card {
   padding: 1.6rem; border-radius: var(--r-lg);
   border: 1px solid var(--line); background: var(--surface-1);
+  /* the .path-code sample below is unbroken (white-space: pre) — without
+     this the grid track grows to fit it and pushes past the viewport. */
+  min-width: 0;
 }
 .path-card h3 { font-size: 1.1rem; display: flex; align-items: center; gap: .6rem; }
 .path-card h3 svg { width: 20px; height: 20px; color: var(--iris-bright); }
@@ -109,6 +112,7 @@
   font-family: var(--font-mono); font-size: .72rem; color: var(--text-faint);
   background: var(--surface-0); border: 1px solid var(--line);
   border-radius: var(--r-sm); padding: .6rem .7rem; overflow-x: auto; white-space: pre;
+  max-width: 100%;
 }
 
 .landing-foot {
@@ -161,7 +165,7 @@
 }
 .session-bar { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .8rem; }
 .session-bar .who { font-weight: 600; }
-.session-bar .key { font-family: var(--font-mono); font-size: .7rem; color: var(--text-faint); }
+.session-bar .key { font-family: var(--font-mono); font-size: .7rem; color: var(--text-faint); overflow-wrap: anywhere; min-width: 0; }
 
 .chat-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: .7rem; padding-right: .3rem; }
 .bubble {
@@ -265,7 +269,7 @@
 }
 .chain-status.ok  { background: var(--ok-ghost); color: var(--ok); }
 .chain-status.bad { background: var(--crit-ghost); color: var(--crit); }
-.chain-status .hh { margin-left: auto; font-family: var(--font-mono); font-size: .7rem; opacity: .8; }
+.chain-status .hh { margin-left: auto; font-family: var(--font-mono); font-size: .7rem; opacity: .8; overflow-wrap: anywhere; min-width: 0; }
 
 .ledger-toolbar { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }
 .ledger-filter { display: flex; gap: .3rem; flex-wrap: wrap; }
@@ -286,13 +290,17 @@
 .ev-type { font-family: var(--font-mono); font-size: .72rem; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ev-actor { font-size: .66rem; color: var(--text-faint); margin-left: auto; flex-shrink: 0; }
 .ev-reason { color: var(--text-dim); margin-top: .25rem; line-height: 1.45; font-size: .78rem; }
-.ev-hash { font-family: var(--font-mono); font-size: .6rem; color: var(--text-faint); margin-top: .25rem; }
+.ev-hash { font-family: var(--font-mono); font-size: .6rem; color: var(--text-faint); margin-top: .25rem; overflow-wrap: anywhere; }
 .ev-json { display: none; margin-top: .4rem; }
 .ev.open .ev-json { display: block; animation: fade-in var(--dur-2); }
 
 /* ============ MANDATES ============ */
 .mandate-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1.25rem; padding-block: 1.5rem 3rem; align-items: start; }
 @media (max-width: 900px) { .mandate-layout { grid-template-columns: 1fr; } }
+/* grid items default to min-width:auto, so a long unbroken value inside
+   (e.g. the credential's signature) can inflate the whole column past
+   the viewport — force them to respect the track instead. */
+.mandate-layout > * { min-width: 0; }
 .persona-list { display: flex; flex-direction: column; gap: .6rem; }
 .persona {
   text-align: left; width: 100%;
@@ -322,6 +330,9 @@
 .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding-block: 1.5rem 3rem; }
 @media (max-width: 900px) { .agents-grid { grid-template-columns: 1fr; } }
 .agents-grid .span-2 { grid-column: 1 / -1; }
+/* same min-width:0 fix as .mandate-layout — a long code sample must not
+   inflate the grid track past the viewport. */
+.agents-grid > * { min-width: 0; }
 .ext-count-big { font-family: var(--font-display); font-weight: 700; font-size: var(--step-4); color: var(--iris-bright); font-variant-numeric: tabular-nums; }
 .sec-line { display: flex; align-items: center; gap: .6rem; padding: .6rem .8rem; border-radius: var(--r-md); font-size: .82rem; background: var(--ok-ghost); color: var(--ok); }
 .sec-line.hit { background: var(--crit-ghost); color: var(--crit); }

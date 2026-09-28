@@ -139,6 +139,8 @@ img, svg, canvas { display: block; max-width: 100%; }
   text-transform: uppercase;
   color: var(--text-faint);
   font-weight: 500;
+  /* often holds an id or key (mandate_id, key_id) with no natural break */
+  overflow-wrap: anywhere;
 }
 .dim { color: var(--text-dim); }
 .faint { color: var(--text-faint); }

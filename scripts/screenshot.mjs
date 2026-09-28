@@ -68,8 +68,20 @@ for (const [vpName, viewport] of Object.entries(VIEWPORTS)) {
         const navH = shell ? shell.getBoundingClientRect().top : 0;
         const vw = window.innerWidth;
         // .shell clips overflow-x, so look for elements poking past the edge.
+        // Skip canvases (nothing to clip) and anything already contained by a
+        // scrolling/clipping ancestor (e.g. `.pipeline`'s intentional
+        // horizontal scroller) — those aren't actually spilling onto the page.
+        const clipsX = (el) => ["auto", "scroll", "hidden", "clip"].includes(getComputedStyle(el).overflowX);
         const wide = [...document.querySelectorAll(".shell *")]
-          .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.right > vw + 1; })
+          .filter((el) => {
+            if (el.tagName === "CANVAS") return false;
+            const r = el.getBoundingClientRect();
+            if (!(r.width > 0 && r.right > vw + 1)) return false;
+            for (let a = el.parentElement; a && a !== shell; a = a.parentElement) {
+              if (clipsX(a)) return false;
+            }
+            return true;
+          })
           .slice(0, 3)
           .map((el) => el.tagName.toLowerCase() + (el.className && typeof el.className === "string" ? "." + el.className.trim().split(/\s+/).join(".") : ""));
         return { contentH: Math.ceil(navH + (shell ? shell.scrollHeight : document.documentElement.scrollHeight)), wide };
