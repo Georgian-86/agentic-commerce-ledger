@@ -190,6 +190,7 @@
   transition: color var(--dur-1), border-color var(--dur-1), background var(--dur-1), transform var(--dur-1);
 }
 .prompt-chip:hover { color: var(--iris-bright); border-color: var(--iris-line); background: var(--iris-ghost); transform: translateY(-1px); }
+.prompt-chip:disabled { opacity: .45; pointer-events: none; }
 
 .chat-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: .7rem; padding-right: .3rem; }
 .bubble {

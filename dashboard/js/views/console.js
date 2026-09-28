@@ -10,10 +10,19 @@ import { skelLines } from "../ui/skeleton.js";
 const STAGES = ["plan", "act", "gate", "reflect", "settle"];
 let state = { sessionId: null, mandate: null, lastDraft: null, lastConfirm: null };
 let offs = [];
+// Shared in-flight guard for session start: a chip click (or a second
+// chip click, or Start-session-then-chip) that arrives while a start is
+// already running awaits this same promise instead of firing another
+// startSession call. Reset on every render so it can't stick across
+// view mounts.
+let startPromise = null;
+let chipButtons = [];
 
 export default {
   async render(mount) {
     state = { sessionId: null, mandate: null, lastDraft: null, lastConfirm: null };
+    startPromise = null;
+    chipButtons = [];
     const mandates = store.get("mandates") || [];
 
     const grid = h("div.console-grid.page");
@@ -141,16 +150,23 @@ function micButton(input, onFinal) {
 function promptChip(label, sendText) {
   const btn = h("button.prompt-chip", { type: "button", text: label });
   btn.addEventListener("click", () => handleChipClick(sendText));
+  chipButtons.push(btn);
   return btn;
 }
 
 async function handleChipClick(text) {
   if (!state.sessionId) {
     const sel = document.querySelector("#mandate-pick");
+    // startSession() itself de-dupes concurrent callers (see its
+    // comment) — a chip click that lands mid-start awaits the same
+    // in-flight start rather than kicking off a second one.
     await startSession(sel.value);
     if (!state.sessionId) return; // start failed — toast already shown
   }
   const input = document.querySelector("#chat-input");
+  // input/send are disabled synchronously at the top of doSend(), before
+  // its first await, so this also blocks a chip click that arrives while
+  // a message is already in flight.
   if (!input || input.disabled) return;
   input.value = text;
   await doSend(input);
@@ -161,7 +177,23 @@ function mm(k, id, cls = "") {
 }
 
 /* ---------- behaviour ---------- */
-async function startSession(mandate_id, isRetry = false) {
+// Public entry point: #start-btn's click handler and every chip click
+// call this. The first caller starts the real work and caches its
+// promise; any caller that arrives while it's still running (including
+// the internal "unknown mandate" retry, which passes isRetry) shares
+// that same promise instead of starting a second session.
+function startSession(mandate_id, isRetry = false) {
+  if (isRetry) return doStartSession(mandate_id, true);
+  if (startPromise) return startPromise;
+  chipButtons.forEach((b) => { b.disabled = true; });
+  startPromise = doStartSession(mandate_id, false).finally(() => {
+    startPromise = null;
+    chipButtons.forEach((b) => { b.disabled = false; });
+  });
+  return startPromise;
+}
+
+async function doStartSession(mandate_id, isRetry = false) {
   const btn = document.querySelector("#start-btn");
   btn.disabled = true; btn.textContent = "…";
   try {
